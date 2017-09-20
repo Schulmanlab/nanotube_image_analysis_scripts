@@ -13,9 +13,9 @@ from skimage.filters import roberts, sobel, scharr, prewitt
 image_gray = io.imread(str(sys.argv[1]))
 image = io.imread(str(sys.argv[1]))
 #image_gray = rgb2gray(image)
-'''
-#blobs_log = blob_log(image_gray, max_sigma=30, num_sigma=10, threshold=.1)
-blobs_log = blob_log(image_gray, max_sigma=1, num_sigma=10, threshold=.1)
+
+blobs_log = blob_log(image_gray, max_sigma=30, num_sigma=10, threshold=.01)
+#blobs_log = blob_log(image_gray, max_sigma=1, num_sigma=10, threshold=.1)
 
 print "number of seeds: "+str(len(blobs_log))
 
@@ -42,9 +42,9 @@ for idx, (blobs, color, title) in enumerate(sequence):
     #ax[idx].set_axis_off()
 
 #plt.tight_layout()
-plt.show()'''
+plt.show()
 
-edge_roberts = roberts(image)
+'''edge_roberts = roberts(image)
 edge_sobel = sobel(image)
 
 fig, ax = plt.subplots(ncols=2, sharex=True, sharey=True,
@@ -60,4 +60,4 @@ for a in ax:
     a.axis('off')
 
 plt.tight_layout()
-plt.show()
+plt.show()'''

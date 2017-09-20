@@ -56,6 +56,9 @@ def generate_rectangles(lines, width):
 
 #def generate_rectangle_from_bounding_box
 
+def endpoints(tube):
+	#function to determine the endpoints of a nanotube identified via edge detection/morphological filling
+	#need to find all endpoint candidates and find the pair separated by the longest path
 
 # Line finding using the Probabilistic Hough Transform
 lengths_cy3_joined = []
@@ -118,7 +121,7 @@ for i in range(len(cy3_file_list)):
 		is_joined = 0
 		if region_647.area/2.2 >= 3 and region_647.eccentricity >=.5:
 			for region in regionprops(label_image):
-				if region.area <.3 or region.eccentricity < .5:
+				if region.area/2.2 < 3 or region.eccentricity < .5:
 					continue
 				region_647_coords = region_647.coords.tolist()
 				region_coords = region.coords.tolist()
@@ -137,7 +140,7 @@ for i in range(len(cy3_file_list)):
 		is_joined = 0
 		if region_647.area/2.2 >= 3 and region_647.eccentricity >=.5:
 			for region in regionprops(label_image):
-				if region.area <.3 or region.eccentricity < .5:
+				if region.area/2.2 < 3 or region.eccentricity < .5:
 					continue
 				region_647_coords = region_647.coords.tolist()
 				region_coords = region.coords.tolist()

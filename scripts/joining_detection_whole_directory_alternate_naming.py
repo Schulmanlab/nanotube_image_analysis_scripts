@@ -175,7 +175,7 @@ for i in range(len(cy3_file_list)):
 
 	regions_joined_647 = []
 	regions_joined_cy3 = []
-	print "printing 647 components that are joined"
+	print "detecting joining"
 	print len(regionprops(label_image_647))
 	for region_647 in regionprops(label_image_647):
 		is_joined = 0
@@ -199,10 +199,12 @@ for i in range(len(cy3_file_list)):
 		if is_joined == 1:
 			lengths_647_joined.append(region_647.area/2.2)
 			regions_joined_647.append(region_647)
+			lengths_cy3_joined.append(region.area/2.2)
+			regions_joined_cy3.append(region)
 #print regions_joined_647
 #print regionprops(label_image_647)
 
-	print "printing cy3 components that are joined"
+	'''print "printing cy3 components that are joined"
 	for region_647 in regionprops(label_image_647):
 		is_joined = 0
 		if region_647.area/2.2 >= 3 and region_647.eccentricity >=.5:
@@ -218,7 +220,7 @@ for i in range(len(cy3_file_list)):
 		if is_joined == 1:
 			lengths_cy3_joined.append(joined_cy3_region.area/2.2)
 			regions_joined_cy3.append(joined_cy3_region)
-			#print region.coords
+			#print region.coords'''
 
 	print "printing 647 components that are not joined"
 	for region_647 in regionprops(label_image_647):

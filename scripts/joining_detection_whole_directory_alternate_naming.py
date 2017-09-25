@@ -65,7 +65,7 @@ def make_endpoints_mask(filled_binary_image):
 	#first skeletonize the filled binary image (must be a binary int image)
 	filled_binary_image = filled_binary_image.astype(int)
 	skeleton = skeletonize(filled_binary_image)
-	skelton = skelton.astype(int)
+	skeleton = skeleton.astype(int)
 
 	#now we make a kernel to compute the endpoints of the skeletonized image
 	kernel = np.uint8([[1,  1, 1], [1, 10, 1], [1,  1, 1]])
@@ -77,25 +77,29 @@ def make_endpoints_mask(filled_binary_image):
 	endpoint_mask = np.zeros_like(convolved_skeleton)
 	endpoint_mask[np.where(convolved_skeleton == 11)] = 1
 
-	return 
+	return endpoint_mask
 
 def endpoints(region_coords, endpoint_mask):
 	#using a previously genereated endpoint mask to find the endpoints for a particular tube
 	#this will return a pair of tubles with the x,y coordinates of the two endpoints 
     endpoints_labelled = label(endpoint_mask)
-    potential_endpoints[]
+    potential_endpoints = []
     for endpoint in regionprops(endpoints_labelled):
     	if any(i in region_coords for i in endpoint.coords.tolist()):
     		potential_endpoints.append(endpoint.centroid)
     
     #now we will find the pair of potential endpoints with the maximal separation distance, those are the true endpoints
+    if len(potential_endpoints) <= 1:
+    	return None 
+
     pairwise_distances = distance.cdist(potential_endpoints, potential_endpoints, 'euclidean')
     indices_of_max_distance = unravel_index(pairwise_distances.argmax(), pairwise_distances.shape)
 
-    endpoint1 = pairwise_distances[indices_of_max_distance[0]]
-    endpoint2 = pairwise_distances[indices_of_max_distance[1]]
-
-    endpoints = [endpoint1.centroid, endpoint2.centroid]
+    endpoint1 = potential_endpoints[indices_of_max_distance[0]]
+    endpoint2 = potential_endpoints[indices_of_max_distance[1]]
+    #print endpoint1
+    #print endpoint2
+    endpoints = [endpoint1, endpoint2]
     return endpoints
 
 def are_joined(endpoint1, endpoint2):
@@ -109,7 +113,7 @@ def are_joined(endpoint1, endpoint2):
 		return False 
 
 
-def distance(endpoint1, endpoint2):
+def calc_distance(endpoint1, endpoint2):
 	#simple distance calculation
 	distance_squared = (endpoint1[0]-endpoint2[0]) * (endpoint1[0]-endpoint2[0]) + (endpoint1[1]-endpoint2[1]) * (endpoint1[1]-endpoint2[1])
 	distance = math.sqrt(distance_squared)
@@ -189,10 +193,17 @@ for i in range(len(cy3_file_list)):
 				region_647_endpoints = endpoints(region_647_coords, atto647_endpoint_mask)
 				region_endpoints = endpoints(region_coords, cy3_endpoint_mask)
 
+				if region_647_endpoints == None or region_endpoints == None:
+					continue 
+				#print region_647_endpoints
+				#print region_endpoints
+
 				#now calculate all pairwsie distances between the two sets of endpoints
-				pairwise_distances = distance.cdist(potential_endpoints, potential_endpoints, 'euclidean')
+				pairwise_distances = distance.cdist(region_647_endpoints, region_endpoints, 'euclidean')
 				minimum_distance = pairwise_distances.min()
-				if minimum_distance < 5:
+				
+				if minimum_distance < 12.0:
+					print minimum_distance
 					is_joined = 1
 					#print "we have joining!"
 					break

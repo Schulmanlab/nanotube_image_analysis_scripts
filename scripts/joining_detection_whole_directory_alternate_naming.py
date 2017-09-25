@@ -12,12 +12,14 @@ from skimage.filters import threshold_otsu, threshold_local, rank
 import sys
 import os
 import matplotlib.pyplot as plt
+import math
 from matplotlib import cm
 from matplotlib import path
 from skimage import img_as_uint
-
-
+from scipy import ndimage
+from scipy.spatial import distance
 from scipy import ndimage as ndi
+from numpy import unravel_index
 
 def line_length(line):
 	p0, p1 = line
@@ -56,9 +58,65 @@ def generate_rectangles(lines, width):
 
 #def generate_rectangle_from_bounding_box
 
-def endpoints(tube):
+def make_endpoints_mask(filled_binary_image):
 	#function to determine the endpoints of a nanotube identified via edge detection/morphological filling
 	#need to find all endpoint candidates and find the pair separated by the longest path
+
+	#first skeletonize the filled binary image (must be a binary int image)
+	filled_binary_image = filled_binary_image.astype(int)
+	skeleton = skeletonize(filled_binary_image)
+	skelton = skelton.astype(int)
+
+	#now we make a kernel to compute the endpoints of the skeletonized image
+	kernel = np.uint8([[1,  1, 1], [1, 10, 1], [1,  1, 1]])
+
+	#now we convolve the kernel with the skeletonized image 
+	convolved_skeleton = ndimage.convolve(skeleton, kernel, mode='constant', cval = 1)
+
+	#now produce an output mask with only pixels with value 11, these are the endpoints
+	endpoint_mask = np.zeros_like(convolved_skeleton)
+	endpoint_mask[np.where(convolved_skeleton == 11)] = 1
+
+	return 
+
+def endpoints(region_coords, endpoint_mask):
+	#using a previously genereated endpoint mask to find the endpoints for a particular tube
+	#this will return a pair of tubles with the x,y coordinates of the two endpoints 
+    endpoints_labelled = label(endpoint_mask)
+    potential_endpoints[]
+    for endpoint in regionprops(endpoints_labelled):
+    	if any(i in region_coords for i in endpoint.coords.tolist()):
+    		potential_endpoints.append(endpoint.centroid)
+    
+    #now we will find the pair of potential endpoints with the maximal separation distance, those are the true endpoints
+    pairwise_distances = distance.cdist(potential_endpoints, potential_endpoints, 'euclidean')
+    indices_of_max_distance = unravel_index(pairwise_distances.argmax(), pairwise_distances.shape)
+
+    endpoint1 = pairwise_distances[indices_of_max_distance[0]]
+    endpoint2 = pairwise_distances[indices_of_max_distance[1]]
+
+    endpoints = [endpoint1.centroid, endpoint2.centroid]
+    return endpoints
+
+def are_joined(endpoint1, endpoint2):
+	#given two endpoints calculate the distance between them and return True or False for whether they meet the joining criteria
+	cutoff = 5.0 
+	distance = distance(endpoint1,endpoint2)
+	if distance <= cutoff: 
+		return True 
+
+	else:
+		return False 
+
+
+def distance(endpoint1, endpoint2):
+	#simple distance calculation
+	distance_squared = (endpoint1[0]-endpoint2[0]) * (endpoint1[0]-endpoint2[0]) + (endpoint1[1]-endpoint2[1]) * (endpoint1[1]-endpoint2[1])
+	distance = math.sqrt(distance_squared)
+
+	return distance
+
+	
 
 # Line finding using the Probabilistic Hough Transform
 lengths_cy3_joined = []
@@ -102,12 +160,14 @@ for i in range(len(cy3_file_list)):
 	edges = closing(edges_open, selem)
 	fill_tubes = ndi.binary_fill_holes(edges)
 	io.imsave(cy3_file+"fill_tubes.png", img_as_uint(fill_tubes), cmap=cm.gray)
+	cy3_endpoint_mask = make_endpoints_mask(fill_tubes)
 
 	edges_open_647 = canny(image_647, 2, 1, 25)
 	selem = disk(2)
 	edges_647 = closing(edges_open_647, selem)
 	fill_tubes_647 = ndi.binary_fill_holes(edges_647)
 	io.imsave(atto647_file+"fill_tubes.png", img_as_uint(fill_tubes_647), cmap=cm.gray)
+	atto647_endpoint_mask = make_endpoints_mask(fill_tubes_647)
 
 	#label image 
 	label_image = label(fill_tubes)
@@ -125,7 +185,14 @@ for i in range(len(cy3_file_list)):
 					continue
 				region_647_coords = region_647.coords.tolist()
 				region_coords = region.coords.tolist()
-				if any(i in region_647_coords for i in region_coords):
+
+				region_647_endpoints = endpoints(region_647_coords, atto647_endpoint_mask)
+				region_endpoints = endpoints(region_coords, cy3_endpoint_mask)
+
+				#now calculate all pairwsie distances between the two sets of endpoints
+				pairwise_distances = distance.cdist(potential_endpoints, potential_endpoints, 'euclidean')
+				minimum_distance = pairwise_distances.min()
+				if minimum_distance < 5:
 					is_joined = 1
 					#print "we have joining!"
 					break

@@ -183,9 +183,9 @@ for i in range(len(cy3_file_list)):
 	print len(regionprops(label_image_647))
 	for region_647 in regionprops(label_image_647):
 		is_joined = 0
-		if region_647.area/2.2 >= 3 and region_647.eccentricity >=.5:
+		if region_647.area/5.0 >= 3 and region_647.eccentricity >=.5:
 			for region in regionprops(label_image):
-				if region.area/2.2 < 3 or region.eccentricity < .5:
+				if region.area/5.0 < 3 or region.eccentricity < .5:
 					continue
 				region_647_coords = region_647.coords.tolist()
 				region_coords = region.coords.tolist()
@@ -208,9 +208,9 @@ for i in range(len(cy3_file_list)):
 					#print "we have joining!"
 					break
 		if is_joined == 1:
-			lengths_647_joined.append(region_647.area/2.2)
+			lengths_647_joined.append(region_647.area/5.0)
 			regions_joined_647.append(region_647)
-			lengths_cy3_joined.append(region.area/2.2)
+			lengths_cy3_joined.append(region.area/5.0)
 			regions_joined_cy3.append(region)
 #print regions_joined_647
 #print regionprops(label_image_647)
@@ -218,9 +218,9 @@ for i in range(len(cy3_file_list)):
 	'''print "printing cy3 components that are joined"
 	for region_647 in regionprops(label_image_647):
 		is_joined = 0
-		if region_647.area/2.2 >= 3 and region_647.eccentricity >=.5:
+		if region_647.area/5.0 >= 3 and region_647.eccentricity >=.5:
 			for region in regionprops(label_image):
-				if region.area/2.2 < 3 or region.eccentricity < .5:
+				if region.area/5.0 < 3 or region.eccentricity < .5:
 					continue
 				region_647_coords = region_647.coords.tolist()
 				region_coords = region.coords.tolist()
@@ -229,19 +229,19 @@ for i in range(len(cy3_file_list)):
 					joined_cy3_region = region
 					break
 		if is_joined == 1:
-			lengths_cy3_joined.append(joined_cy3_region.area/2.2)
+			lengths_cy3_joined.append(joined_cy3_region.area/5.0)
 			regions_joined_cy3.append(joined_cy3_region)
 			#print region.coords'''
 
 	print "printing 647 components that are not joined"
 	for region_647 in regionprops(label_image_647):
-		if region_647 not in regions_joined_647 and region_647.area/2.2>= 3 and region_647.eccentricity>=.5:
-			lengths_647_unjoined.append(region_647.area/2.2)
+		if region_647 not in regions_joined_647 and region_647.area/5.0>= 3 and region_647.eccentricity>=.5:
+			lengths_647_unjoined.append(region_647.area/5.0)
 
 	print "printing cy3 components that are not joined"
 	for region in regionprops(label_image):
-		if region not in regions_joined_cy3 and region.area/2.2>= 3 and region.eccentricity>=.5:
-			lengths_cy3_unjoined.append(region.area/2.2)
+		if region not in regions_joined_cy3 and region.area/5.0>= 3 and region.eccentricity>=.5:
+			lengths_cy3_unjoined.append(region.area/5.0)
 
 	i+=3
 

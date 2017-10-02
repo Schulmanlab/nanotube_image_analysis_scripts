@@ -21,6 +21,12 @@ from scipy.spatial import distance
 from scipy import ndimage as ndi
 from numpy import unravel_index
 
+#constants
+tube_width
+length_cutoff
+eccentricity_cutoff = 0.5
+end_to_end_distance_cutoff = 10.0
+
 def line_length(line):
 	p0, p1 = line
 	a = np.array((p0[0],p0[1]))
@@ -28,35 +34,6 @@ def line_length(line):
 	dist = np.linalg.norm(a-b)
 	#print dist
 	return dist
-
-def generate_rectangles(lines, width):
-	#for each line, define a rectange that is the length of the line and has a width of 10 (5 on either side)
-	rectangles = []
-	for line in lines:
-		p0, p1 = line
-		a = np.array((p0[0],p0[1],0))
-		b = np.array((p1[0],p1[1],0))
-		z_vec = np.array((0,0,1))
-		slope_vector = a - b
-		perpendicular_to_slope = np.cross(slope_vector,z_vec)
-		normalized_perpendicular_to_slope = perpendicular_to_slope / np.linalg.norm(perpendicular_to_slope)
-		#first 2 corners
-		c1 = a + width*normalized_perpendicular_to_slope
-		c2 = a - width*normalized_perpendicular_to_slope
-		#second 2 corners 
-		c3 = b - width*normalized_perpendicular_to_slope
-		c4 = b + width*normalized_perpendicular_to_slope
-
-
-
-		rectangle = np.array([[c1[0],c1[1]],[c2[0],c2[1]],[c3[0],c3[1]],[c4[0],c4[1]]])
-		rectangle_path = path.Path(rectangle) #converting vertices into path so that contains_point can be used
-		#print rectangle_path
-
-		rectangles.append(rectangle_path)
-	return rectangles
-
-#def generate_rectangle_from_bounding_box
 
 def make_endpoints_mask(filled_binary_image):
 	#function to determine the endpoints of a nanotube identified via edge detection/morphological filling
@@ -183,9 +160,9 @@ for i in range(len(cy3_file_list)):
 	print len(regionprops(label_image_647))
 	for region_647 in regionprops(label_image_647):
 		is_joined = 0
-		if region_647.area/5.0 >= 3 and region_647.eccentricity >=.5:
+		if region_647.area/tube_width >= length_cutoff and region_647.eccentricity >= eccentricity_cutoff:
 			for region in regionprops(label_image):
-				if region.area/5.0 < 3 or region.eccentricity < .5:
+				if region.area/tube_width < length_cutoff or region.eccentricity < eccentricity_cutoff:
 					continue
 				region_647_coords = region_647.coords.tolist()
 				region_coords = region.coords.tolist()
@@ -202,46 +179,27 @@ for i in range(len(cy3_file_list)):
 				pairwise_distances = distance.cdist(region_647_endpoints, region_endpoints, 'euclidean')
 				minimum_distance = pairwise_distances.min()
 				
-				if minimum_distance < 12.0:
+				if minimum_distance < end_to_end_distance_cutoff:
 					print minimum_distance
 					is_joined = 1
 					#print "we have joining!"
 					break
 		if is_joined == 1:
-			lengths_647_joined.append(region_647.area/5.0)
+			lengths_647_joined.append(region_647.area/tube_width)
 			regions_joined_647.append(region_647)
-			lengths_cy3_joined.append(region.area/5.0)
+			lengths_cy3_joined.append(region.area/tube_width)
 			regions_joined_cy3.append(region)
-#print regions_joined_647
-#print regionprops(label_image_647)
 
-	'''print "printing cy3 components that are joined"
-	for region_647 in regionprops(label_image_647):
-		is_joined = 0
-		if region_647.area/5.0 >= 3 and region_647.eccentricity >=.5:
-			for region in regionprops(label_image):
-				if region.area/5.0 < 3 or region.eccentricity < .5:
-					continue
-				region_647_coords = region_647.coords.tolist()
-				region_coords = region.coords.tolist()
-				if any(i in region_647_coords for i in region_coords):
-					is_joined = 1
-					joined_cy3_region = region
-					break
-		if is_joined == 1:
-			lengths_cy3_joined.append(joined_cy3_region.area/5.0)
-			regions_joined_cy3.append(joined_cy3_region)
-			#print region.coords'''
 
 	print "printing 647 components that are not joined"
 	for region_647 in regionprops(label_image_647):
-		if region_647 not in regions_joined_647 and region_647.area/5.0>= 3 and region_647.eccentricity>=.5:
-			lengths_647_unjoined.append(region_647.area/5.0)
+		if region_647 not in regions_joined_647 and region_647.area/tube_width>= length_cutoff and region_647.eccentricity>= eccentricity_cutoff:
+			lengths_647_unjoined.append(region_647.area/tube_width)
 
 	print "printing cy3 components that are not joined"
 	for region in regionprops(label_image):
-		if region not in regions_joined_cy3 and region.area/5.0>= 3 and region.eccentricity>=.5:
-			lengths_cy3_unjoined.append(region.area/5.0)
+		if region not in regions_joined_cy3 and region.area/tube_width>= length_cutoff and region.eccentricity>= eccentricity_cutoff:
+			lengths_cy3_unjoined.append(region.area/tube_width)
 
 	i+=3
 

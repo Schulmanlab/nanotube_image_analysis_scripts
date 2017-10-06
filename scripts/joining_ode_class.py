@@ -162,8 +162,12 @@ class ODE_joining:
 			
 			for j in range(self.n_bins):
 				dAdt -= 1.0 * param * self.kjoin( (i+1)*self.bin_length, (j+1)*self.bin_length ) * Aconc[i] * Bconc[j]
-				dBdt -= 1.0 * param * self.kjoin( (i+1)*self.bin_length, (j+1)*self.bin_length ) * Bconc[i] * Aconc[i]
-				dCdt = 1.0 * param * self.kjoin( (i+1)*self.bin_length, (j+1)*self.bin_length ) * Aconc[i] * Bconc[j] + 1.0 * param * self.kjoin( (i+1)*self.bin_length, (j+1)*self.bin_length ) * Bconc[i] * Aconc[i]
+				dBdt -= 1.0 * param * self.kjoin( (i+1)*self.bin_length, (j+1)*self.bin_length ) * Bconc[i] * Aconc[j]
+				if i == j:
+					dCdt = 1.0 * param * self.kjoin( (i+1)*self.bin_length, (j+1)*self.bin_length ) * Aconc[i] * Bconc[j] 
+				else:
+					dCdt = 1.0 * param * self.kjoin( (i+1)*self.bin_length, (j+1)*self.bin_length ) * Aconc[i] * Bconc[j] + 1.0 * param * self.kjoin( (i+1)*self.bin_length, (j+1)*self.bin_length ) * Bconc[i] * Aconc[j]
+					
 				dCdt_list[i+j] += dCdt
 
 			dAdt_list[i] = dAdt

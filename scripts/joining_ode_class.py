@@ -108,6 +108,10 @@ class ODE_joining:
 		A_conc_data = []
 		B_conc_data = []
 		C_conc_data = []
+		B_unjoined_conc_data = []
+
+		initial_A, initial_B = read_initial_concentrations()
+
 		for timepoint in range(len(t)):
 			conc_data = w[timepoint]
 			A_conc_data_timepoint = []
@@ -121,11 +125,12 @@ class ODE_joining:
 				C_conc_data_timepoint.append(conc_data[i+2])
 				i+=3
 			A_conc_data.append(A_conc_data_timepoint)
-			B_conc_data.append(A_conc_data_timepoint)
-			C_conc_data.append(A_conc_data_timepoint)
+			B_conc_data.append(B_conc_data_timepoint)
+			C_conc_data.append(C_conc_data_timepoint)
+			B_unjoined_conc_data.append(calc_joined_B_dist_from_unjoined_B_dist(B_conc_data_timepoint, initial_B))
 
 
-		return t, A_conc_data, B_conc_data, C_conc_data
+		return t, A_conc_data, B_conc_data, C_conc_data, B_unjoined_conc_data
 
 	def calc_joined_B_dist_from_unjoined_B_dist(self, unjoined_B_dist, initial_B_dist):
 		#given an unjoined B distribution from the ode solver, use the initial B distribution to back out the joined B distribution
@@ -202,15 +207,22 @@ class ODE_joining:
 
 	def kjoin(self, n, m):
 		#calculate kjoin according to type of joining model being considered
+		#for bernie/hill models there is a scaling factor to be considered, this is related to the ratio of the tube length to diameter
+		#going to set scaling to match Abdul's translational diffusion coefficient calculation
+		#D = (kT/N*friction)*ln(N)
+		#friction = 6*pi*viscosity*(diameter/2)
+		#lengths must be divided by tube diameter!
+		d = 0.015 #microns, lengths are in microns
+
 		if self.joining_model == 'constant':
 			return 1
 
 		elif self.joining_model == 'hill':
-			kjoin_hill = (n * math.log(m) + m * math.log(n)) / (n * m * (n+m))
+			kjoin_hill = (n/d * math.log(m/d) + m/d * math.log(n/d)) / (n/d * m/d * (n/d+m/d))
 			return kjoin_hill
 
 		elif self.joining_model == 'bernie':
-			kjoin_bernie = (n * math.log(m) + m * math.log(n)) / (n * m)
+			kjoin_bernie = (n/d * math.log(m/d) + m/d * math.log(n/d)) / (n/d * m/d)
 			return kjoin_bernie
 
 		else:
@@ -304,7 +316,7 @@ class ODE_joining:
 
 		#first we need to load in the experimental data for comparison
 		#we are comparing at 30 minutes (labelled 0hr), 2 hrs (2.5hr), and 4hrs (4.5hr)
-
+		initial_A, initial_B = read_initial_concentrations()
 		t0_A_unjoined, t0_B_unjoined, t0_A_joined, t0_B_joined, t0_C_joined = self.read_ABC_concentrations('0hr')
 		t2_A_unjoined, t2_B_unjoined, t2_A_joined, t2_B_joined, t2_C_joined = self.read_ABC_concentrations('2hr')
 		t4_A_unjoined, t4_B_unjoined, t4_A_joined, t4_B_joined, t4_C_joined = self.read_ABC_concentrations('4hr')
@@ -341,7 +353,8 @@ class ODE_joining:
 			simulated_joining_percentage.append(joining_fraction)
 
 			simulated_C_joined.append(Cconc)
-			simulated_B_joined.append(Bconc) #this is wrong :( this is actually the concentration of unjoined B tubes 
+			B_joined_conc = calc_joined_B_dist_from_unjoined_B_dist(Bconc, initial_B)
+			#simulated_B_joined.append(Bconc) #this is wrong :( this is actually the concentration of unjoined B tubes 
 
 		joining_percentage_component = 0 
 		Ctubes_component = 0

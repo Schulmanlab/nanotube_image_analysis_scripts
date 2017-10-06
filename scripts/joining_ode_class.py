@@ -11,11 +11,16 @@ class ODE_joining:
 		self.bin_length = max_tube_length/float(n_bins)
 	#python script to setup and integrate ODEs to model nanotube joining
 	#we need ODEs for A,B, and C tubes: one ODE per bin
+
 	def read_initial_concentrations(self):
 		#read initial concentrations of A and B tubes from files
+		#although there is some joining at the "0hr" timepoint we are going to asssume everything is unjoined 
+		#for the purposes of running the ODE, therefore we will sum the joined and unjoined tubes for both A and B 
 		time_prefix = '0hr'
 		A_unjoined, B_unjoined, A_joined, B_joined, C_joined = self.read_ABC_concentrations(time_prefix)
-		return A_unjoined, B_unjoined
+		A_total = [sum(x) for x in zip(A_unjoined, A_joined)]
+		B_total = [sum(x) for x in zip(B_unjoined, B_joined)]
+		return A_total, B_total
 
 	def read_ABC_concentrations(self, time_prefix):
 		#read in the A/B/C distributions for specified experimental timepoint 	
@@ -122,6 +127,12 @@ class ODE_joining:
 
 		return t, A_conc_data, B_conc_data, C_conc_data
 
+	def calc_joined_B_dist_from_unjoined_B_dist(self, unjoined_B_dist, initial_B_dist):
+		#given an unjoined B distribution from the ode solver, use the initial B distribution to back out the joined B distribution
+		#the total concentration of B tubes should be conserved so this should be valid...
+		joined_B_dist = [(x[0] - x[1]) for x in zip(initial_B_dist, unjoined_B_dist)]
+		return joined_B_dist
+
 	def vectorfield(self, w, t, param):
 		#for A tubes: dAi/dt = -1 * sum_over_m[kjoin(i,m)[Ai][Bm]]
 		#for B tubes: dBi/dt = -1 * sum_over_m[kjoin(i,m)[Bi][Am]]
@@ -167,7 +178,7 @@ class ODE_joining:
 					dCdt = 1.0 * param * self.kjoin( (i+1)*self.bin_length, (j+1)*self.bin_length ) * Aconc[i] * Bconc[j] 
 				else:
 					dCdt = 1.0 * param * self.kjoin( (i+1)*self.bin_length, (j+1)*self.bin_length ) * Aconc[i] * Bconc[j] + 1.0 * param * self.kjoin( (i+1)*self.bin_length, (j+1)*self.bin_length ) * Bconc[i] * Aconc[j]
-					
+
 				dCdt_list[i+j] += dCdt
 
 			dAdt_list[i] = dAdt

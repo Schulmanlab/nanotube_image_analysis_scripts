@@ -4,7 +4,7 @@ import math
 
 
 class ODE_joining:
-	def __init__(self, joining_model = 'constant', n_bins = 83, max_tube_length = 10.0, bootstrap = False):
+	def __init__(self, joining_model = 'constant', n_bins = 10, max_tube_length = 10.0, bootstrap = False):
 		self.joining_model = joining_model
 		self.n_bins = n_bins
 		self.max_tube_length = max_tube_length
@@ -381,7 +381,7 @@ class ODE_joining:
 		for i in range(3): 
 			experimental_joining_percentage.append(sum(experimental_B_joined[i])/(sum(experimental_B_joined[i])+sum(experimental_B_unjoined[i])))
 
-		print 'expt joining percentage: ', experimental_joining_percentage
+		#print 'expt joining percentage: ', experimental_joining_percentage
 
 		t, wsol = self.perform_integration(param)
 		for w in wsol:
@@ -421,11 +421,11 @@ class ODE_joining:
 			if i>=1:
 				#this is the C tubes cdf component
 				Ctubes_component += self.cumulative_distribution_error(experimental_C_joined[i-1], simulated_C_joined[i])
-				#squared_error += self.cumulative_distribution_error(experimental_C_joined[i-1], simulated_C_joined[i])
+				squared_error += self.cumulative_distribution_error(experimental_C_joined[i-1], simulated_C_joined[i])
 
 				#this is the joined B tubes cdf component
 				Btubes_component += self.cumulative_distribution_error(experimental_B_joined[i-1], simulated_B_joined[i])
-				#squared_error += self.cumulative_distribution_error(experimental_B_joined[i-1], simulated_B_joined[i])
+				squared_error += self.cumulative_distribution_error(experimental_B_joined[i-1], simulated_B_joined[i])
 
 		#print simulated_joining_percentage, experimental_joining_percentage
 		#print "joining percentage component" + str(joining_percentage_component)

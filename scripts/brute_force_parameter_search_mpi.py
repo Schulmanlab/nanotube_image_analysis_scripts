@@ -117,7 +117,8 @@ for i in range(n_bootstrap):
 	best_kjoin_list.append(best_kjoin)
 
 #here we will send out the best_kjoin_list for this process to the head process (is it ok for a process to send to itself? we will find out)
-comm.send(best_kjoin_list, tag = 11, root = 0)
+if comm.rank != 0:
+	comm.send(best_kjoin_list, tag = 11, root = 0)
 #here is where we want to append the other best_kjoin_lists from the all processes running
 if comm.rank == 0: 
 	total_best_kjoin_list = []

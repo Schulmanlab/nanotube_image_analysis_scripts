@@ -1,18 +1,21 @@
 import numpy as np
 from scipy.integrate import odeint
 import math 
-import random
-#TODO: add proper scaling into kjoin expressions
-#TODO: add way to track distribution of joined B tubes
+
+
 class ODE_joining:
-	def __init__(self, joining_model = 'constant', n_bins = 10, max_tube_length = 10.0, bootstrap = True):
+	def __init__(self, joining_model = 'constant', n_bins = 83, max_tube_length = 10.0, bootstrap = False):
 		self.joining_model = joining_model
 		self.n_bins = n_bins
 		self.max_tube_length = max_tube_length
 		self.bin_length = max_tube_length/float(n_bins)
 		self.model_name = joining_model
 		self.bootstrap = bootstrap
-		self.initial_A_unjoined, self.initial_B_unjoined, self.initial_A_joined, self.initial_B_joined, self.initial_C_joined = self.read_ABC_concentrations('0hr')
+		self.n_slides = 25.0
+		self.dilution_factor = 5.0 
+		np.random.seed()
+		self.random_seed =  np.random.randint(0,2**32 - 1) #generating a random seed here, each time read_ABC_concentrations is called the same random seed will be provided so identical calls should return the same values
+		#print 'constructor random seed is: ' + str(self.random_seed)
 
 	#python script to setup and integrate ODEs to model nanotube joining
 	#we need ODEs for A,B, and C tubes: one ODE per bin
@@ -28,6 +31,9 @@ class ODE_joining:
 		return A_total, B_total
 
 	def read_ABC_concentrations(self, time_prefix):
+		np.random.seed(self.random_seed) #resetting the state of the random number generator so we get the same concs on
+										#sucesive calls of read_ABC_concentrations when bootstrapping is active
+
 		#read in the A/B/C distributions for specified experimental timepoint 	
 		A_unjoined_filename = time_prefix + '_unjoined647.dat'
 		B_unjoined_filename = time_prefix + '_unjoinedcy3.dat'
@@ -76,27 +82,21 @@ class ODE_joining:
 
 
 		#here if we wish to bootstrap we will include only half of the raw data in the binning procedure
-		#the half of the data that is selected will be randomized 
+		#the half of the data that is selected will be randomized
+		#modify this to take exactly 1/2 of the data every time rather than doing it randomly
+		#this will ensure that the size of the sample is the same for each bootstrapping run 
 		if self.bootstrap == True:
-			for length in A_unjoined_raw_data:
-				if random.randint(0,1) == 1:
-					A_unjoined_raw_data.remove(length)
+			raw_data = [A_unjoined_raw_data, B_unjoined_raw_data, C_joined_raw_data, A_joined_raw_data, B_joined_raw_data]
+			#print "length before: "
+			#print len(A_unjoined_raw_data)
+			for data_type in raw_data:
+				values_to_exclude = np.random.choice(data_type, len(data_type)/2, False)
+				for value in values_to_exclude:
+					data_type.remove(value)
+			#print "length after: "
+			#print len(A_unjoined_raw_data)
 
-			for length in B_unjoined_raw_data:
-				if random.randint(0,1) == 1:
-					B_unjoined_raw_data.remove(length)
 
-			for length in C_joined_raw_data:
-				if random.randint(0,1) == 1:
-					C_joined_raw_data.remove(length)
-
-			for length in A_joined_raw_data:
-				if random.randint(0,1) == 1:
-					A_joined_raw_data.remove(length)
-
-			for length in B_joined_raw_data:
-				if random.randint(0,1) == 1:
-					B_joined_raw_data.remove(length)
 
 			#print B_joined_raw_data
 
@@ -121,21 +121,27 @@ class ODE_joining:
 		#need to convert these to concentrations
 		#subsequent concentrations at later time points will be normalized
 		#first convert count to moles, then divide by 6 microliters, then divide by two for half on coverslip half on slide
+		#divide by half the number of slides here if you are bootstrapping
+		if self.bootstrap == True:
+			effective_slides = self.n_slides/2.0
+		else:
+			effective_slides = self.n_slides 
+
 		for i in range(len(bin_edges_C) - 1):
 			#tried doing this conversion but missing the .087, why is this here? Using Deepak's calculation of N = 42[conc in pm]/per FOV
 			#A_count_binned[i] = A_count_binned[i] * (1.0/6.022e23) * (1.0/6e-6) * (1.0/(.087*.087)) * 2.0
 			#B_count_binned[i] = B_count_binned[i] * (1.0/6.022e23) * (1.0/6e-6) * 2.0
 			
-			A_unjoined_count_binned[i] = A_unjoined_count_binned[i] * (1.0/42.0) * (1.0/25.0) * 1e-12 * 5.0#1/25 per fov
-			B_unjoined_count_binned[i] = B_unjoined_count_binned[i] * (1.0/42.0) * (1.0/25.0) * 1e-12 * 5.0
-			A_joined_count_binned[i] = A_joined_count_binned[i] * (1.0/42.0) * (1.0/25.0) * 1e-12 * 5.0#1/25 per fov
-			B_joined_count_binned[i] = B_joined_count_binned[i] * (1.0/42.0) * (1.0/25.0) * 1e-12 * 5.0
-			C_joined_count_binned[i] = C_joined_count_binned[i] * (1.0/42.0) * (1.0/25.0) * 1e-12 * 5.0
+			A_unjoined_count_binned[i] = A_unjoined_count_binned[i] * (1.0/42.0) * (1.0/effective_slides) * 1e-12 * self.dilution_factor #1/25 per fov
+			B_unjoined_count_binned[i] = B_unjoined_count_binned[i] * (1.0/42.0) * (1.0/effective_slides) * 1e-12 * self.dilution_factor
+			A_joined_count_binned[i] = A_joined_count_binned[i] * (1.0/42.0) * (1.0/effective_slides) * 1e-12 * self.dilution_factor #1/25 per fov
+			B_joined_count_binned[i] = B_joined_count_binned[i] * (1.0/42.0) * (1.0/effective_slides) * 1e-12 * self.dilution_factor
+			C_joined_count_binned[i] = C_joined_count_binned[i] * (1.0/42.0) * (1.0/effective_slides) * 1e-12 * self.dilution_factor
 			
 		#print sum(A_count_binned), sum(B_count_binned)
 		#print 'C_joined_count_binned'
 		#print C_joined_count_binned
-		print B_joined_count_binned
+		#print B_joined_count_binned
 		return A_unjoined_count_binned, B_unjoined_count_binned, A_joined_count_binned, B_joined_count_binned, C_joined_count_binned
 		#this is not actually a count, it is a concentration...
 
@@ -357,7 +363,8 @@ class ODE_joining:
 		#calculating simulated joining percentage
 		#first perform the integration for the given kjoin
 
-		experimental_joining_percentage = [0.0, .23, .339, .381]
+		#original: experimental_joining_percentage = [0.0, .23, .339, .381]
+		experimental_joining_percentage = [0.0, .3, .4, .5]
 		simulated_joining_percentage = []
 
 		experimental_C_joined = [t0_C_joined, t2_C_joined, t4_C_joined]
@@ -398,17 +405,17 @@ class ODE_joining:
 
 			#this is the joining percentage contribution 
 			joining_percentage_component += (experimental_joining_percentage[i]-simulated_joining_percentage[i]) * (experimental_joining_percentage[i]-simulated_joining_percentage[i])
-			squared_error += (experimental_joining_percentage[i]-simulated_joining_percentage[i]) * (experimental_joining_percentage[i]-simulated_joining_percentage[i])
+			squared_error += 1.0 * (experimental_joining_percentage[i]-simulated_joining_percentage[i]) * (experimental_joining_percentage[i]-simulated_joining_percentage[i])
 
 			
 			if i>=1:
 				#this is the C tubes cdf component
 				Ctubes_component += self.cumulative_distribution_error(experimental_C_joined[i-1], simulated_C_joined[i])
-				squared_error += self.cumulative_distribution_error(experimental_C_joined[i-1], simulated_C_joined[i])
+				#squared_error += self.cumulative_distribution_error(experimental_C_joined[i-1], simulated_C_joined[i])
 
 				#this is the joined B tubes cdf component
 				Btubes_component += self.cumulative_distribution_error(experimental_B_joined[i-1], simulated_B_joined[i])
-				squared_error += self.cumulative_distribution_error(experimental_B_joined[i-1], simulated_B_joined[i])
+				#squared_error += self.cumulative_distribution_error(experimental_B_joined[i-1], simulated_B_joined[i])
 
 		#print simulated_joining_percentage, experimental_joining_percentage
 		#print "joining percentage component" + str(joining_percentage_component)

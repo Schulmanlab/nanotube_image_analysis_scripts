@@ -364,7 +364,10 @@ class ODE_joining:
 		#first perform the integration for the given kjoin
 
 		#original: experimental_joining_percentage = [0.0, .23, .339, .381]
-		experimental_joining_percentage = [0.0, .3, .4, .5]
+		#experimental_joining_percentage = [0.0, .3, .4, .5]
+		#experimental_joining_percentage is now calculated from the data directly rather than hard coded, this will allow this component
+		#of the error function to properly handle bootstrapping now
+		experimental_joining_percentage = [0.0]
 		simulated_joining_percentage = []
 
 		experimental_C_joined = [t0_C_joined, t2_C_joined, t4_C_joined]
@@ -372,6 +375,13 @@ class ODE_joining:
 
 		experimental_B_joined = [t0_B_joined, t2_B_joined, t4_B_joined]
 		simulated_B_joined = []
+
+		experimental_B_unjoined = [t0_B_unjoined, t2_B_unjoined, t4_B_unjoined]
+
+		for i in range(3): 
+			experimental_joining_percentage.append(sum(experimental_B_joined[i])/(sum(experimental_B_joined[i])+sum(experimental_B_unjoined[i])))
+
+		print 'expt joining percentage: ', experimental_joining_percentage
 
 		t, wsol = self.perform_integration(param)
 		for w in wsol:

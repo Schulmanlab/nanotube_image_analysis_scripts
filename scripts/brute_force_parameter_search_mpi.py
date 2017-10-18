@@ -128,10 +128,10 @@ if comm.rank == 0:
 	interval_error = confidence_interval(error_boot_list)
 
 	print best_kjoin_list
-	print "best Hill parameter: ", best_kjoin_full_data_hill
-	print "best Hill error: ", best_error_full_data_hill
-	print ".90 CI Hill parameter: ", interval_parameter
-	print ".90 CI Hill error: ", interval_error
+	print "best Hill parameter: %.4g" % best_kjoin_full_data_hill
+	print "best Hill error: %.4g" % best_error_full_data_hill
+	print ".90 CI Hill parameter: %.4g " % interval_parameter
+	print ".90 CI Hill error: %.4g" % interval_error
 
 
 #optimal_kjoin_table.append(["Hill", best_kjoin_full_data_hill, best_error_full_data_hill, interval_parameter, interval_error])

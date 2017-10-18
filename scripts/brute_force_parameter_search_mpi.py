@@ -33,7 +33,7 @@ jode_hill = joining_ode_class.ODE_joining('hill')
 jode_bernie = joining_ode_class.ODE_joining('bernie')
 plot_dir_name = "bin10/discontinuity_testing/"
 n_bootstrap = 2 
-n_bins = 10
+n_bins = 8
 max_tube_length = 10.0
 
 def optimal_parameter_hill(hill_model):

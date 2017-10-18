@@ -127,7 +127,7 @@ if comm.rank == 0:
 	interval_parameter = confidence_interval(best_kjoin_list)
 	interval_error = confidence_interval(error_boot_list)
 
-	#print best_kjoin_list
+	print best_kjoin_list
 	print "best Hill parameter: ", best_kjoin_full_data_hill
 	print "best Hill error: ", best_error_full_data_hill
 	print ".90 CI Hill parameter: ", interval_parameter

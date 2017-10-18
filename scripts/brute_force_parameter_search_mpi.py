@@ -171,13 +171,13 @@ for i in range(n_bootstrap):
 	best_kjoin_list.append(best_kjoin)
 #here we will send out the best_kjoin_list for this process to the head process (is it ok for a process to send to itself? we will find out)
 if comm.rank != 0:
-	comm.send(best_kjoin_list, dest=0, tag = 11)
-	comm.send(error_boot_list, dest=0, tag = 12)
+	comm.send(best_kjoin_list, dest=0, tag = 13)
+	comm.send(error_boot_list, dest=0, tag = 14)
 #here is where we want to append the other best_kjoin_lists from the all processes running
 if comm.rank == 0: 
 	for i in range(comm.size - 1):
-		slave_kjoin_list = comm.recv(source = i+1 , tag = 11)
-		slave_error_list = comm.recv(source = i+1 , tag = 12)
+		slave_kjoin_list = comm.recv(source = i+1 , tag = 13)
+		slave_error_list = comm.recv(source = i+1 , tag = 14)
 		for slave_kjoin in slave_kjoin_list:
 			best_kjoin_list.append( slave_kjoin)
 		for slave_error in slave_error_list:
@@ -231,13 +231,13 @@ for i in range(n_bootstrap):
 
 #here we will send out the best_kjoin_list for this process to the head process (is it ok for a process to send to itself? we will find out)
 if comm.rank != 0:
-	comm.send(best_kjoin_list, dest=0, tag = 11)
-	comm.send(error_boot_list, dest=0, tag = 12)
+	comm.send(best_kjoin_list, dest=0, tag = 15)
+	comm.send(error_boot_list, dest=0, tag = 16)
 #here is where we want to append the other best_kjoin_lists from the all processes running
 if comm.rank == 0: 
 	for i in range(comm.size - 1):
-		slave_kjoin_list = comm.recv(source = i+1 , tag = 11)
-		slave_error_list = comm.recv(source = i+1 , tag = 12)
+		slave_kjoin_list = comm.recv(source = i+1 , tag = 15)
+		slave_error_list = comm.recv(source = i+1 , tag = 16)
 		for slave_kjoin in slave_kjoin_list:
 			best_kjoin_list.append( slave_kjoin)
 		for slave_error in slave_error_list:

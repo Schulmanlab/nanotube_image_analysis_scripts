@@ -32,7 +32,7 @@ jode_constant = joining_ode_class.ODE_joining('constant')
 jode_hill = joining_ode_class.ODE_joining('hill')
 jode_bernie = joining_ode_class.ODE_joining('bernie')
 plot_dir_name = "bin10/discontinuity_testing/"
-n_bootstrap = 2 
+n_bootstrap = 1 
 n_bins = 10
 max_tube_length = 10.0
 
@@ -156,7 +156,7 @@ squared_error_list = []
 for kjoin in kjoin_list:
 	squared_error_list.append( jode_bernie.vahid_error(float(kjoin)) )'''
 
-best_kjoin_full_data_bernie, best_error_full_data_bernie = optimal_parameter_hill(jode_bernie)
+best_kjoin_full_data_bernie, best_error_full_data_bernie = optimal_parameter_bernie(jode_bernie)
 
 
 best_kjoin_list = []
@@ -213,7 +213,7 @@ for kjoin in kjoin_list:
 	squared_error_list.append( jode_constant.vahid_error(float(kjoin)) )'''
 
 
-best_kjoin_full_data_constant, best_error_full_data_constant = optimal_parameter_hill(jode_constant)
+best_kjoin_full_data_constant, best_error_full_data_constant = optimal_parameter_constant(jode_constant)
 
 best_kjoin_list = []
 error_boot_list = []

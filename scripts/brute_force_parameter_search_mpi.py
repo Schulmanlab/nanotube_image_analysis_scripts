@@ -128,7 +128,7 @@ if comm.rank == 0:
 		for slave_kjoin in slave_kjoin_list:
 			best_kjoin_list.append( slave_kjoin)
 
-	print total_best_kjoin_list
+	print best_kjoin_list
 
 interval_parameter = confidence_interval(best_kjoin_list)
 interval_error = confidence_interval(error_boot_list)

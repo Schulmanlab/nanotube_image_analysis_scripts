@@ -94,8 +94,8 @@ optimal_kjoin_table = []
 for kjoin in kjoin_list:
 	squared_error_list.append( jode_hill.vahid_error(float(kjoin)) )'''
 
-if comm.rank == 0:
-	best_kjoin_full_data_hill, best_error_full_data_hill = optimal_parameter_hill(jode_hill)
+
+best_kjoin_full_data_hill, best_error_full_data_hill = optimal_parameter_hill(jode_hill)
 
 best_kjoin_list = []
 error_boot_list = []

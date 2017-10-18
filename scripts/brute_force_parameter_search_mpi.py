@@ -123,9 +123,10 @@ if comm.rank != 0:
 	comm.send(best_kjoin_list, dest=0, tag = 11)
 #here is where we want to append the other best_kjoin_lists from the all processes running
 if comm.rank == 0: 
-	total_best_kjoin_list = []
 	for i in range(comm.size - 1):
-		total_best_kjoin_list.append( comm.recv(source = i+1 , tag = 11))
+		slave_kjoin_list = comm.recv(source = i+1 , tag = 11)
+		for slave_kjoin in slave_kjoin_list:
+			best_kjoin_list.append( slave_kjoin)
 
 	print total_best_kjoin_list
 

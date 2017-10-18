@@ -147,25 +147,16 @@ if comm.rank == 0:
 
 
 
-param_list = np.linspace(1e7, 1.5e8, 400)
+'''param_list = np.linspace(1e7, 1.5e8, 400)
 kjoin_list = [param_list[i] for i in range(len(param_list))]
 #original: kjoin_list = [1e7+(i*1e6) for i in range(200)]
 squared_error_list = []
 #kjoin_list = [1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14]
 #kjoin_list = [10000*(i*10) for i in range(10)]
 for kjoin in kjoin_list:
-	squared_error_list.append( jode_bernie.vahid_error(float(kjoin)) )
+	squared_error_list.append( jode_bernie.vahid_error(float(kjoin)) )'''
 
-best_kjoin_full_data_bernie = kjoin_list[squared_error_list.index(min(squared_error_list))]
-best_error_full_data_bernie = min(squared_error_list)
-#optimal_kjoin_table.append(["Bernie", best_kjoin, best_error])
-
-plt.plot(kjoin_list, squared_error_list)
-plt.xlabel('kjoin prefactor')
-plt.ylabel('squared error')
-plt.title('Bernie model brute force optimization')
-plt.savefig(plot_dir_name + 'Bernie_model_brute_force_optimization.pdf')
-plt.close()
+best_kjoin_full_data_bernie, best_error_full_data_bernie = optimal_parameter_hill(jode_bernie)
 
 
 best_kjoin_list = []
@@ -178,18 +169,40 @@ for i in range(n_bootstrap):
 	#print best_kjoin, best_error, bernie_model.random_seed
 	
 	best_kjoin_list.append(best_kjoin)
+#here we will send out the best_kjoin_list for this process to the head process (is it ok for a process to send to itself? we will find out)
+if comm.rank != 0:
+	comm.send(best_kjoin_list, dest=0, tag = 11)
+	comm.send(error_boot_list, dest=0, tag = 12)
+#here is where we want to append the other best_kjoin_lists from the all processes running
+if comm.rank == 0: 
+	for i in range(comm.size - 1):
+		slave_kjoin_list = comm.recv(source = i+1 , tag = 11)
+		slave_error_list = comm.recv(source = i+1 , tag = 12)
+		for slave_kjoin in slave_kjoin_list:
+			best_kjoin_list.append( slave_kjoin)
+		for slave_error in slave_error_list:
+			error_boot_list.append( slave_error)
 
-interval_parameter = confidence_interval(best_kjoin_list)
-interval_error = confidence_interval(error_boot_list)
+	interval_parameter = confidence_interval(best_kjoin_list)
+	interval_error = confidence_interval(error_boot_list)
+	for kjoin in best_kjoin_list:
+		print "%.4g" % kjoin
+	print best_kjoin_list
+	print "best Bernie parameter: %.4g" % best_kjoin_full_data_bernie
+	print "best Bernie error: %.4g" % best_error_full_data_bernie
+	print ".90 CI Bernie parameter: %.4g - %.4g " % (interval_parameter[0], interval_parameter[1])
+	print ".90 CI Bernie error: %.4g - %.4g" % (interval_error[0], interval_error[1])
 
 
-optimal_kjoin_table.append(["Bernie", best_kjoin_full_data_bernie, best_error_full_data_bernie, interval_parameter, interval_error])
+
+
+#optimal_kjoin_table.append(["Bernie", best_kjoin_full_data_bernie, best_error_full_data_bernie, interval_parameter, interval_error])
 
 
 
 
 #optimal_kjoin_table = []
-param_list = np.linspace(1e6, .8e7, 400)
+'''param_list = np.linspace(1e6, .8e7, 400)
 kjoin_list = [param_list[i] for i in range(len(param_list))]
 kjoin_list = [1e6+(i*1e5) for i in range(100)]
 squared_error_list = []
@@ -197,22 +210,10 @@ squared_error_list = []
 #kjoin_list = [10000*(i*10) for i in range(10)]
 
 for kjoin in kjoin_list:
-	squared_error_list.append( jode_constant.vahid_error(float(kjoin)) )
+	squared_error_list.append( jode_constant.vahid_error(float(kjoin)) )'''
 
-best_kjoin_full_data_constant = kjoin_list[squared_error_list.index(min(squared_error_list))]
-error_specific = squared_error_list [kjoin_list.index(5.8e6)]
-#print 'error for 5.8e6: '+str(error_specific)
-best_error_full_data_constant = min(squared_error_list)
-#optimal_kjoin_table.append(["constant", best_kjoin, best_error])
 
-plt.plot(kjoin_list, squared_error_list)
-plt.xlabel('kjoin prefactor')
-plt.ylabel('squared error')
-plt.title('Constant kjoin model brute force optimization')
-#plt.ylim([.35,.45])
-plt.savefig(plot_dir_name + 'Constant_kjoin_model_brute_force_optimization.pdf')
-plt.close()
-
+best_kjoin_full_data_constant, best_error_full_data_constant = optimal_parameter_hill(jode_constant)
 
 best_kjoin_list = []
 error_boot_list = []
@@ -228,11 +229,34 @@ for i in range(n_bootstrap):
 	
 	best_kjoin_list.append(best_kjoin)
 
-interval_parameter = confidence_interval(best_kjoin_list)
-interval_error = confidence_interval(error_boot_list)
+#here we will send out the best_kjoin_list for this process to the head process (is it ok for a process to send to itself? we will find out)
+if comm.rank != 0:
+	comm.send(best_kjoin_list, dest=0, tag = 11)
+	comm.send(error_boot_list, dest=0, tag = 12)
+#here is where we want to append the other best_kjoin_lists from the all processes running
+if comm.rank == 0: 
+	for i in range(comm.size - 1):
+		slave_kjoin_list = comm.recv(source = i+1 , tag = 11)
+		slave_error_list = comm.recv(source = i+1 , tag = 12)
+		for slave_kjoin in slave_kjoin_list:
+			best_kjoin_list.append( slave_kjoin)
+		for slave_error in slave_error_list:
+			error_boot_list.append( slave_error)
+
+	interval_parameter = confidence_interval(best_kjoin_list)
+	interval_error = confidence_interval(error_boot_list)
+	for kjoin in best_kjoin_list:
+		print "%.4g" % kjoin
+	print best_kjoin_list
+	print "best constant parameter: %.4g" % best_kjoin_full_data_constant
+	print "best constant error: %.4g" % best_error_full_data_constant
+	print ".90 CI constant parameter: %.4g - %.4g " % (interval_parameter[0], interval_parameter[1])
+	print ".90 CI constant error: %.4g - %.4g" % (interval_error[0], interval_error[1])
 
 
-optimal_kjoin_table.append(["constant", best_kjoin_full_data_constant, best_error_full_data_constant, interval_parameter, interval_error])
+
+
+#optimal_kjoin_table.append(["constant", best_kjoin_full_data_constant, best_error_full_data_constant, interval_parameter, interval_error])
 
 #print tabulate(optimal_kjoin_table, headers = ["model", "fitted parameter", "squared error", ".90 parameter CI", ".90 error CI"])
 

@@ -19,6 +19,7 @@ def confidence_interval(data, confidence=0.90):
 	n, min_max, mean, var, skew, kurt = scipy.stats.describe( s )
 	normalized_var = var/math.sqrt(0.5)
 	std = math.sqrt(normalized_var)
+	print std
 	interval = scipy.stats.norm.interval(0.90, loc = mean, scale = std )
 	return interval 
 

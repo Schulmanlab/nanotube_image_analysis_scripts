@@ -83,7 +83,7 @@ def optimal_parameter_constant(constant_model):
 	return best_kjoin, best_error
 
 
-param_list = np.linspace(1e10, 1.5e11, 400)
+'''param_list = np.linspace(1e10, 1.5e11, 400)
 kjoin_list = [param_list[i] for i in range(len(param_list))]
 #original: kjoin_list = [1e10+(i*1e9) for i in range(200)]
 squared_error_list = []
@@ -92,18 +92,10 @@ squared_error_list = []
 
 optimal_kjoin_table = []
 for kjoin in kjoin_list:
-	squared_error_list.append( jode_hill.vahid_error(float(kjoin)) )
+	squared_error_list.append( jode_hill.vahid_error(float(kjoin)) )'''
 
-best_kjoin_full_data_hill = kjoin_list[squared_error_list.index(min(squared_error_list))]
-best_error_full_data_hill = min(squared_error_list)
-
-
-plt.plot(kjoin_list, squared_error_list)
-plt.xlabel('kjoin prefactor')
-plt.ylabel('squared error')
-plt.title('Hill model brute force optimization')
-plt.savefig(plot_dir_name + 'Hill_model_brute_force_optimization.pdf')
-plt.close()
+if comm.rank == 0:
+	best_kjoin_full_data_hill, best_error_full_data_hill = optimal_parameter_hill(jode_hill)
 
 best_kjoin_list = []
 error_boot_list = []
@@ -121,20 +113,28 @@ for i in range(n_bootstrap):
 #here we will send out the best_kjoin_list for this process to the head process (is it ok for a process to send to itself? we will find out)
 if comm.rank != 0:
 	comm.send(best_kjoin_list, dest=0, tag = 11)
+	comm.send(error_boot_list, dest=0, tag = 12)
 #here is where we want to append the other best_kjoin_lists from the all processes running
 if comm.rank == 0: 
 	for i in range(comm.size - 1):
 		slave_kjoin_list = comm.recv(source = i+1 , tag = 11)
+		slave_error_list = comm.recv(source = i+1 , tag = 12)
 		for slave_kjoin in slave_kjoin_list:
 			best_kjoin_list.append( slave_kjoin)
+		for slave_error in slave_error_list:
+			error_boot_list.append( slave_error)
 
-	print best_kjoin_list
+	interval_parameter = confidence_interval(best_kjoin_list)
+	interval_error = confidence_interval(error_boot_list)
 
-interval_parameter = confidence_interval(best_kjoin_list)
-interval_error = confidence_interval(error_boot_list)
+	#print best_kjoin_list
+	print "best Hill parameter: ", best_kjoin_full_data_hill
+	print "best Hill error: ", best_error_full_data_hill
+	print ".90 CI Hill parameter: ", interval_parameter
+	print ".90 CI Hill error: ", interval_error
 
 
-optimal_kjoin_table.append(["Hill", best_kjoin_full_data_hill, best_error_full_data_hill, interval_parameter, interval_error])
+#optimal_kjoin_table.append(["Hill", best_kjoin_full_data_hill, best_error_full_data_hill, interval_parameter, interval_error])
 
 
 

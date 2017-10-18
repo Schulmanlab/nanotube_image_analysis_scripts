@@ -131,8 +131,8 @@ if comm.rank == 0:
 	#print best_kjoin_list
 	print "best Hill parameter: %.4g" % best_kjoin_full_data_hill
 	print "best Hill error: %.4g" % best_error_full_data_hill
-	print ".90 CI Hill parameter: %.4g - %.4g " % interval_parameter[0], interval_parameter[1]
-	print ".90 CI Hill error: %.4g - %.4g" % interval_error[0], interval_error[1]
+	print ".90 CI Hill parameter: %.4g - %.4g " % (interval_parameter[0], interval_parameter[1])
+	print ".90 CI Hill error: %.4g - %.4g" % (interval_error[0], interval_error[1])
 
 
 #optimal_kjoin_table.append(["Hill", best_kjoin_full_data_hill, best_error_full_data_hill, interval_parameter, interval_error])

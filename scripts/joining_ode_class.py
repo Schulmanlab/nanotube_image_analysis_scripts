@@ -4,7 +4,7 @@ import math
 #test
 
 class ODE_joining:
-	def __init__(self, joining_model = 'constant', n_bins = 10, max_tube_length = 10.0, bootstrap = False):
+	def __init__(self, joining_model = 'constant', n_bins = 9, max_tube_length = 10.0, bootstrap = False):
 		self.joining_model = joining_model
 		self.n_bins = n_bins
 		self.max_tube_length = max_tube_length

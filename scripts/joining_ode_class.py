@@ -461,13 +461,13 @@ class ODE_joining:
 
 			#this is the joining percentage contribution 
 			joining_percentage_component += (experimental_joining_percentage[i]-simulated_joining_percentage[i]) * (experimental_joining_percentage[i]-simulated_joining_percentage[i])
-			#squared_error += 1.0 * (experimental_joining_percentage[i]-simulated_joining_percentage[i]) * (experimental_joining_percentage[i]-simulated_joining_percentage[i])
+			squared_error += 1.0 * (experimental_joining_percentage[i]-simulated_joining_percentage[i]) * (experimental_joining_percentage[i]-simulated_joining_percentage[i])
 
 			
 			if i>=1:
 				#this is the C tubes cdf component
 				Ctubes_component += self.cumulative_distribution_error(experimental_C_joined[i-1], simulated_C_joined[i])
-				#squared_error += self.cumulative_distribution_error(experimental_C_joined[i-1], simulated_C_joined[i])
+				squared_error += self.cumulative_distribution_error(experimental_C_joined[i-1], simulated_C_joined[i])
 
 				#this is the joined B tubes cdf component
 				Btubes_component += self.cumulative_distribution_error(experimental_B_joined[i-1], simulated_B_joined[i])

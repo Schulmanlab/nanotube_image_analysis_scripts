@@ -15,7 +15,11 @@ with open("constant_errors_boot_list.dat") as f:
 	content = f.readlines()
 constant_errors = [float(x.strip()) for x in content]
 
-data = [hill_errors, bernie_errors, constant_errors]
-for list1, list2 in combinations(data, 2):
-	t, p = ttest_ind(list1, list2)
+data = {
+	'hill' : hill_errors,
+	'bernie' : bernie_errors,
+	'constant' : constant_errors,
+}
+for list1, list2 in combinations(data.keys(), 2):
+	t, p = ttest_ind(data[list1], data[list2])
 	print list1, list2, p

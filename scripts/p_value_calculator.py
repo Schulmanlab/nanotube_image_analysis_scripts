@@ -2,6 +2,7 @@ import numpy as np
 import math 
 from itertools import combinations
 from scipy.stats import ttest_ind
+import random
 
 with open("hill_errors_boot_list.dat") as f:
 	content = f.readlines()

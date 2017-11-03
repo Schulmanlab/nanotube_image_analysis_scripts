@@ -26,7 +26,7 @@ for list1, list2 in combinations(data.keys(), 2):
 	print list1, list2, p
 
 success = 0 
-for i in range (10000):
+for i in range (1e10):
 	hill_error = random.choice(hill_errors)
 	bernie_error = random.choice(bernie_errors)
 	constant_error = random.choice(constant_errors)
@@ -34,5 +34,5 @@ for i in range (10000):
 	if constant_error < bernie_error < hill_error:
 		success += 1
 
-prob = float(success)/10000.0
-print "probability of constant < bernie < hill is: "
+prob = float(success)/1e10
+print "probability of constant < bernie < hill is: ", prob

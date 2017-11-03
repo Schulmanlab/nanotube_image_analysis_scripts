@@ -3,8 +3,10 @@ from __future__ import unicode_literals
 #script to generate data files needed for plotting
 import numpy as np
 import joining_ode_class
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from tabulate import tabulate
+#from tabulate import tabulate
 import random
 import scipy as sp
 import scipy.stats

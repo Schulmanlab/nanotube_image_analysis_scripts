@@ -33,7 +33,7 @@ jode_hill = joining_ode_class.ODE_joining('hill')
 jode_bernie = joining_ode_class.ODE_joining('bernie')
 plot_dir_name = "bin10/discontinuity_testing/"
 n_bootstrap = 10 
-n_bins = 9
+n_bins = 10
 max_tube_length = 10.0
 
 def optimal_parameter_hill(hill_model):
@@ -130,7 +130,16 @@ if comm.rank == 0:
 	interval_error = confidence_interval(error_boot_list)
 	for kjoin in best_kjoin_list:
 		print "%.4g" % kjoin
-	print best_kjoin_list
+	#print best_kjoin_list
+	print "dumping error and kjoins to text files"
+	f1=open('hill_errors_boot_list.dat','w+')
+	for error in error_boot_list:
+		print >>f1, error
+	f1.close()
+	f1=open('hill_params_boot_list.dat','w+')
+	for kjoin in best_kjoin_list:
+		print >>f1, kjoin
+	f1.close()
 	print "best Hill parameter: %.4g" % best_kjoin_full_data_hill
 	print "best Hill error: %.4g" % best_error_full_data_hill
 	print ".90 CI Hill parameter: %.4g - %.4g " % (interval_parameter[0], interval_parameter[1])
@@ -188,6 +197,15 @@ if comm.rank == 0:
 	for kjoin in best_kjoin_list:
 		print "%.4g" % kjoin
 	print best_kjoin_list
+	f1=open('bernie_errors_boot_list.dat','w+')
+	for error in error_boot_list:
+		print >>f1, error
+	f1.close()
+	f1=open('bernie_params_boot_list.dat','w+')
+	for kjoin in best_kjoin_list:
+		print >>f1, kjoin
+	f1.close()
+
 	print "best Bernie parameter: %.4g" % best_kjoin_full_data_bernie
 	print "best Bernie error: %.4g" % best_error_full_data_bernie
 	print ".90 CI Bernie parameter: %.4g - %.4g " % (interval_parameter[0], interval_parameter[1])
@@ -248,6 +266,15 @@ if comm.rank == 0:
 	for kjoin in best_kjoin_list:
 		print "%.4g" % kjoin
 	print best_kjoin_list
+	f1=open('constant_errors_boot_list.dat','w+')
+	for error in error_boot_list:
+		print >>f1, error
+	f1.close()
+	f1=open('constant_params_boot_list.dat','w+')
+	for kjoin in best_kjoin_list:
+		print >>f1, kjoin
+	f1.close()
+
 	print "best constant parameter: %.4g" % best_kjoin_full_data_constant
 	print "best constant error: %.4g" % best_error_full_data_constant
 	print ".90 CI constant parameter: %.4g - %.4g " % (interval_parameter[0], interval_parameter[1])

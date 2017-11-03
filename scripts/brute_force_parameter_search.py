@@ -29,8 +29,8 @@ def confidence_interval(data, confidence=0.90):
 jode_constant = joining_ode_class.ODE_joining('constant')
 jode_hill = joining_ode_class.ODE_joining('hill')
 jode_bernie = joining_ode_class.ODE_joining('bernie')
-plot_dir_name = "bin10/discontinuity_testing/"
-n_bootstrap = 10 
+plot_dir_name = "bin10/optimal_parameter/"
+n_bootstrap = 1 
 n_bins = 10
 max_tube_length = 10.0
 
@@ -82,7 +82,7 @@ def optimal_parameter_constant(constant_model):
 	return best_kjoin, best_error
 
 
-param_list = np.linspace(1e10, 1.5e11, 400)
+param_list = np.linspace(1e10, 3e11, 400)
 kjoin_list = [param_list[i] for i in range(len(param_list))]
 #original: kjoin_list = [1e10+(i*1e9) for i in range(200)]
 squared_error_list = []
@@ -131,7 +131,7 @@ optimal_kjoin_table.append(["Hill", best_kjoin_full_data_hill, best_error_full_d
 
 
 
-param_list = np.linspace(1e7, 1.5e8, 400)
+param_list = np.linspace(1e7, 3e8, 400)
 kjoin_list = [param_list[i] for i in range(len(param_list))]
 #original: kjoin_list = [1e7+(i*1e6) for i in range(200)]
 squared_error_list = []
@@ -175,7 +175,7 @@ optimal_kjoin_table.append(["Bernie", best_kjoin_full_data_bernie, best_error_fu
 #optimal_kjoin_table = []
 param_list = np.linspace(1e6, .8e7, 400)
 kjoin_list = [param_list[i] for i in range(len(param_list))]
-kjoin_list = [1e6+(i*1e5) for i in range(100)]
+#kjoin_list = [1e6+(i*1e5) for i in range(100)]
 squared_error_list = []
 #kjoin_list = [1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14]
 #kjoin_list = [10000*(i*10) for i in range(10)]
@@ -184,8 +184,8 @@ for kjoin in kjoin_list:
 	squared_error_list.append( jode_constant.vahid_error(float(kjoin)) )
 
 best_kjoin_full_data_constant = kjoin_list[squared_error_list.index(min(squared_error_list))]
-error_specific = squared_error_list [kjoin_list.index(5.8e6)]
-print 'error for 5.8e6: '+str(error_specific)
+#error_specific = squared_error_list [kjoin_list.index(5.8e6)]
+#print 'error for 5.8e6: '+str(error_specific)
 best_error_full_data_constant = min(squared_error_list)
 #optimal_kjoin_table.append(["constant", best_kjoin, best_error])
 
@@ -193,7 +193,7 @@ plt.plot(kjoin_list, squared_error_list)
 plt.xlabel('kjoin prefactor')
 plt.ylabel('squared error')
 plt.title('Constant kjoin model brute force optimization')
-#plt.ylim([.35,.45])
+plt.ylim([.0,.2])
 plt.savefig(plot_dir_name + 'Constant_kjoin_model_brute_force_optimization.pdf')
 plt.close()
 

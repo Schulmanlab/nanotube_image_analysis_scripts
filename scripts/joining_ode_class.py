@@ -4,7 +4,7 @@ import math
 #test
 
 class ODE_joining:
-	def __init__(self, joining_model = 'constant', n_bins = 9, max_tube_length = 10.0, bootstrap = False):
+	def __init__(self, joining_model = 'constant', n_bins = 10, max_tube_length = 10.0, bootstrap = False):
 		self.joining_model = joining_model
 		self.n_bins = n_bins
 		self.max_tube_length = max_tube_length
@@ -29,6 +29,51 @@ class ODE_joining:
 		A_total = [sum(x) for x in zip(A_unjoined, A_joined)]
 		B_total = [sum(x) for x in zip(B_unjoined, B_joined)]
 		return A_total, B_total
+
+	def read_ABC_lengths(self, time_prefix):
+		#return the list of lengths for each species at a particular timepoint 
+		np.random.seed(self.random_seed) #resetting the state of the random number generator so we get the same concs on
+		#sucesive calls of read_ABC_concentrations when bootstrapping is active
+
+				#read in the A/B/C distributions for specified experimental timepoint 	
+		A_unjoined_filename = time_prefix + '_unjoined647.dat'
+		B_unjoined_filename = time_prefix + '_unjoinedcy3.dat'
+		A_joined_filename = time_prefix + '_joinedcy3.dat'
+		B_joined_filename = time_prefix + '_joinedcy3.dat'
+		C_joined_filename = time_prefix + '_Cjoined.dat'
+		
+
+		with open(A_unjoined_filename) as f:
+			content = f.readlines()
+		A_unjoined_raw_data = [float(x.strip())*.17 for x in content]
+
+		with open(B_unjoined_filename) as f:
+			content = f.readlines()
+		B_unjoined_raw_data = [float(x.strip())*.17 for x in content]
+
+		with open(A_joined_filename) as f:
+			content = f.readlines()
+		A_joined_raw_data = [float(x.strip())*.17 for x in content]
+
+		with open(B_joined_filename) as f:
+			content = f.readlines()
+		B_joined_raw_data = [float(x.strip())*.17 for x in content]
+
+		with open(C_joined_filename) as f:
+			content = f.readlines()
+		C_joined_raw_data = [float(x.strip())*.17 for x in content]
+
+		if self.bootstrap == True:
+			raw_data = [A_unjoined_raw_data, B_unjoined_raw_data, C_joined_raw_data, A_joined_raw_data, B_joined_raw_data]
+			#print "length before: "
+			#print len(A_unjoined_raw_data)
+			for data_type in raw_data:
+				values_to_exclude = np.random.choice(data_type, len(data_type)/2, False)
+				for value in values_to_exclude:
+					data_type.remove(value)
+
+		return A_unjoined_raw_data, B_unjoined_raw_data, C_joined_raw_data, A_joined_raw_data, B_joined_raw_data
+
 
 	def read_ABC_concentrations(self, time_prefix):
 		np.random.seed(self.random_seed) #resetting the state of the random number generator so we get the same concs on
@@ -254,6 +299,7 @@ class ODE_joining:
 		#D = (kT/N*friction)*ln(N)
 		#friction = 6*pi*viscosity*(diameter/2)
 		#lengths must be divided by tube diameter!
+		#original d = 0.015 #microns, lengths are in microns
 		d = 0.015 #microns, lengths are in microns
 
 		if self.joining_model == 'constant':
@@ -415,13 +461,13 @@ class ODE_joining:
 
 			#this is the joining percentage contribution 
 			joining_percentage_component += (experimental_joining_percentage[i]-simulated_joining_percentage[i]) * (experimental_joining_percentage[i]-simulated_joining_percentage[i])
-			squared_error += 1.0 * (experimental_joining_percentage[i]-simulated_joining_percentage[i]) * (experimental_joining_percentage[i]-simulated_joining_percentage[i])
+			#squared_error += 1.0 * (experimental_joining_percentage[i]-simulated_joining_percentage[i]) * (experimental_joining_percentage[i]-simulated_joining_percentage[i])
 
 			
 			if i>=1:
 				#this is the C tubes cdf component
 				Ctubes_component += self.cumulative_distribution_error(experimental_C_joined[i-1], simulated_C_joined[i])
-				squared_error += self.cumulative_distribution_error(experimental_C_joined[i-1], simulated_C_joined[i])
+				#squared_error += self.cumulative_distribution_error(experimental_C_joined[i-1], simulated_C_joined[i])
 
 				#this is the joined B tubes cdf component
 				Btubes_component += self.cumulative_distribution_error(experimental_B_joined[i-1], simulated_B_joined[i])

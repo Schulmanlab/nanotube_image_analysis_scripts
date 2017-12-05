@@ -22,8 +22,8 @@ from scipy import ndimage as ndi
 from numpy import unravel_index
 
 #constants
-tube_width
-length_cutoff
+tube_width = 5.0
+length_cutoff = 3.0 
 eccentricity_cutoff = 0.5
 end_to_end_distance_cutoff = 10.0
 

@@ -4,7 +4,7 @@ import math
 #test
 
 class ODE_joining:
-	def __init__(self, joining_model = 'constant', n_bins = 10, max_tube_length = 10.0, bootstrap = False):
+	def __init__(self, joining_model = 'constant', n_bins = 10, max_tube_length = 10.0, bootstrap = False, weight_joining_percentage = 1.0, weight_a_cdf = 1.0, weight_c_cdf = 1.0):
 		self.joining_model = joining_model
 		self.n_bins = n_bins
 		self.max_tube_length = max_tube_length
@@ -13,6 +13,9 @@ class ODE_joining:
 		self.bootstrap = bootstrap
 		self.n_slides = 25.0
 		self.dilution_factor = 5.0 
+		self.weight_joining_percentage = weight_joining_percentage
+		self.weight_a_cdf = weight_a_cdf
+		self.weight_c_cdf = weight_c_cdf
 		np.random.seed()
 		self.random_seed =  np.random.randint(0,2**32 - 1) #generating a random seed here, each time read_ABC_concentrations is called the same random seed will be provided so identical calls should return the same values
 		#print 'constructor random seed is: ' + str(self.random_seed)
@@ -461,17 +464,17 @@ class ODE_joining:
 
 			#this is the joining percentage contribution 
 			joining_percentage_component += (experimental_joining_percentage[i]-simulated_joining_percentage[i]) * (experimental_joining_percentage[i]-simulated_joining_percentage[i])
-			squared_error += 1.0 * (experimental_joining_percentage[i]-simulated_joining_percentage[i]) * (experimental_joining_percentage[i]-simulated_joining_percentage[i])
+			squared_error += self.weight_joining_percentage * (experimental_joining_percentage[i]-simulated_joining_percentage[i]) * (experimental_joining_percentage[i]-simulated_joining_percentage[i])
 
 			
 			if i>=1:
 				#this is the C tubes cdf component
 				Ctubes_component += self.cumulative_distribution_error(experimental_C_joined[i-1], simulated_C_joined[i])
-				squared_error += self.cumulative_distribution_error(experimental_C_joined[i-1], simulated_C_joined[i])
+				squared_error += self.weight_c_cdf * self.cumulative_distribution_error(experimental_C_joined[i-1], simulated_C_joined[i])
 
 				#this is the joined B tubes cdf component
 				Btubes_component += self.cumulative_distribution_error(experimental_B_joined[i-1], simulated_B_joined[i])
-				squared_error += self.cumulative_distribution_error(experimental_B_joined[i-1], simulated_B_joined[i])
+				squared_error += self.weight_a_cdf * self.cumulative_distribution_error(experimental_B_joined[i-1], simulated_B_joined[i])
 
 		#print simulated_joining_percentage, experimental_joining_percentage
 		#print "joining percentage component" + str(joining_percentage_component)

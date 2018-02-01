@@ -20,6 +20,7 @@ from scipy import ndimage
 from scipy.spatial import distance
 from scipy import ndimage as ndi
 from numpy import unravel_index
+import Tkinter, tkFileDialog
 
 #modifying the joining detection script to measure the angle of Sisi's nanotubes relative to the x-axis of her images 
 
@@ -29,6 +30,15 @@ tube_width = 5.0
 length_cutoff = 3.0 
 eccentricity_cutoff = 0.5
 end_to_end_distance_cutoff = 10.0
+
+def dotproduct(v1, v2):
+  return sum((a*b) for a, b in zip(v1, v2))
+
+def length(v):
+  return math.sqrt(dotproduct(v, v))
+
+def angle(v1, v2):
+  return math.acos(abs(dotproduct(v1, v2) )/ (length(v1) * length(v2)))
 
 def line_length(line):
 	p0, p1 = line
@@ -108,13 +118,18 @@ tube_angles = []
 
 
 i=0
-cy3_file_list = os.listdir('6_nt')
+#cy3_file_list = os.listdir('6_nt')
+root = Tkinter.Tk()
+root.withdraw()
+
+file_paths = tkFileDialog.askopenfilenames()
+cy3_file_list = list(file_paths)
 
 for i in range(len(cy3_file_list)):
 	cy3_file = cy3_file_list[i]
 
 	print "cy3 filename is "+str(cy3_file)
-	image_unthresholded = io.imread('cy3/'+cy3_file)
+	image_unthresholded = io.imread(cy3_file)
 
 	#thresh = threshold_otsu(image_unthresholded)
 	#image = image_unthresholded>thresh
@@ -134,96 +149,43 @@ for i in range(len(cy3_file_list)):
 
 
 	#perfoming edge detection and morphological filling
-	edges_open = canny(image, 3, 1, 25) #originally 2,1,25
+	edges_open = canny(image, 2, 1, 500) #originally 2,1,25
 	#edges_open = canny(image, 2) #originally 2,1,25
-	selem = disk(5)
+	selem = disk(3)#originally 5
 	edges = closing(edges_open, selem)
 	fill_tubes = ndi.binary_fill_holes(edges)
 	io.imsave(cy3_file+"fill_tubes.png", img_as_uint(fill_tubes), cmap=cm.gray)
 	cy3_endpoint_mask = make_endpoints_mask(fill_tubes)
 
 
-'''
+
 	#label image 
 	label_image = label(fill_tubes)
-	label_image_647 = label(fill_tubes_647)
-
-	regions_joined_647 = []
-	regions_joined_cy3 = []
-	print "detecting joining"
-	print len(regionprops(label_image_647))
-	for region_647 in regionprops(label_image_647):
-		is_joined = 0
-		if region_647.area/tube_width >= length_cutoff and region_647.eccentricity >= eccentricity_cutoff:
-			for region in regionprops(label_image):
-				if region.area/tube_width < length_cutoff or region.eccentricity < eccentricity_cutoff:
-					continue
-				region_647_coords = region_647.coords.tolist()
-				region_coords = region.coords.tolist()
-
-				region_647_endpoints = endpoints(region_647_coords, atto647_endpoint_mask)
-				region_endpoints = endpoints(region_coords, cy3_endpoint_mask)
-
-				if region_647_endpoints == None or region_endpoints == None:
-					continue 
-				#print region_647_endpoints
-				#print region_endpoints
-
-				#now calculate all pairwsie distances between the two sets of endpoints
-				pairwise_distances = distance.cdist(region_647_endpoints, region_endpoints, 'euclidean')
-				minimum_distance = pairwise_distances.min()
-				
-				if minimum_distance < end_to_end_distance_cutoff:
-					print minimum_distance
-					is_joined = 1
-					#print "we have joining!"
-					break
-		if is_joined == 1:
-			lengths_647_joined.append(region_647.area/tube_width)
-			regions_joined_647.append(region_647)
-			lengths_cy3_joined.append(region.area/tube_width)
-			regions_joined_cy3.append(region)
 
 
-	print "printing 647 components that are not joined"
-	for region_647 in regionprops(label_image_647):
-		if region_647 not in regions_joined_647 and region_647.area/tube_width>= length_cutoff and region_647.eccentricity>= eccentricity_cutoff:
-			lengths_647_unjoined.append(region_647.area/tube_width)
-
-	print "printing cy3 components that are not joined"
+	print "detecting nanotube angles...."
+	print len(regionprops(label_image))
 	for region in regionprops(label_image):
-		if region not in regions_joined_cy3 and region.area/tube_width>= length_cutoff and region.eccentricity>= eccentricity_cutoff:
-			lengths_cy3_unjoined.append(region.area/tube_width)
+		if region.area/tube_width >= length_cutoff and region.eccentricity >= eccentricity_cutoff:
+			region_coords = region.coords.tolist()
+			region_endpoints = endpoints(region_coords, cy3_endpoint_mask)
+			if region_endpoints == None:
+				continue
+			endpoint_to_endpoint_vector  = np.subtract(region_endpoints[0], region_endpoints[1])
+			x_axis_vector = np.array([0, 1])
+			angle_with_x_axis = angle(endpoint_to_endpoint_vector, x_axis_vector)
+			angle_with_x_axis *= 180.0/math.pi
+			print 'angle with x axis is: ', angle_with_x_axis
+			tube_angles.append(angle_with_x_axis)
 
-	i+=3
+				
 
-print "printing joined 647 lengths"
-f1=open('joined647.dat','w+')
-for length in lengths_647_joined:
-	if length<=200:
-		print >>f1, length
+
+
+print "printing angles"
+f1=open('angles.dat','w+')
+for angle in tube_angles:
+	print >>f1, angle
 f1.close()
 
-print "printing joined cy3 lengths"
-f1=open('joinedcy3.dat','w+')
-for length in lengths_cy3_joined:
-	if length<=200:
-		print >>f1, length
-f1.close()
 
-print "printing unjoined 647 lengths"
-f1=open('unjoined647.dat','w+')
-for length in lengths_647_unjoined:
-	if length<=200:
-		print >>f1, length
-f1.close()
-
-print "printing unjoined cy3 lengths"
-f1=open('unjoinedcy3.dat','w+')
-for length in lengths_cy3_unjoined:
-	if length<=200:
-		print >>f1, length
-f1.close()
-	#fill_tubes_skeleton = skeletonize(fill_tubes)
-
-	'''

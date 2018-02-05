@@ -149,7 +149,7 @@ for i in range(len(cy3_file_list)):
 
 
 	#perfoming edge detection and morphological filling
-	edges_open = canny(image, 2, 1, 500) #originally 2,1,25
+	edges_open = canny(image, 2, 1, 50) #originally 2,1,25 last param can go up to 500 for improved performance, must lower for poorer images
 	#edges_open = canny(image, 2) #originally 2,1,25
 	selem = disk(3)#originally 5
 	edges = closing(edges_open, selem)

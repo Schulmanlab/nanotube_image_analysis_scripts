@@ -20,9 +20,11 @@ from scipy import ndimage
 from scipy.spatial import distance
 from scipy import ndimage as ndi
 from numpy import unravel_index
-import Tkinter, tkFileDialog
+
 
 #modifying the joining detection script to measure the angle of Sisi's nanotubes relative to the x-axis of her images 
+#modifying this script further to measure a time series of angles for individual tubes and performa an autocorrelation 
+#analysis to determine the relaxation time 
 
 #constants
 #constants
@@ -112,40 +114,19 @@ def calc_distance(endpoint1, endpoint2):
 
 	
 
-# Line finding using the Probabilistic Hough Transform
 tube_lengths = []
 tube_angles = []
 
 
 i=0
-#cy3_file_list = os.listdir('6_nt')
-root = Tkinter.Tk()
-root.withdraw()
+cy3_file_list = os.listdir('6_nt')
 
-file_paths = tkFileDialog.askopenfilenames()
-cy3_file_list = list(file_paths)
 
 for i in range(len(cy3_file_list)):
 	cy3_file = cy3_file_list[i]
 
 	print "cy3 filename is "+str(cy3_file)
-	image_unthresholded = io.imread(cy3_file)
-
-	#thresh = threshold_otsu(image_unthresholded)
-	#image = image_unthresholded>thresh
-
-	block_size = 15
-	#image = threshold_local(image_unthresholded, block_size, offset=10)
-	#image_647 = threshold_local(image_647_unthresholded, block_size, offset=10)
-
-	radius = 5
-	selem = disk(radius)
-
-	#thresholding both files (getting rid of this because it should not be necessary!)
-	#image = rank.otsu(image_unthresholded, selem)
-	#image_647 = rank.otsu(image_647_unthresholded, selem)
-
-	image = image_unthresholded
+	image = io.imread(cy3_file)
 
 
 	#perfoming edge detection and morphological filling

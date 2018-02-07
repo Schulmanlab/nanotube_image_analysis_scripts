@@ -20,27 +20,36 @@ from scipy import ndimage
 from scipy.spatial import distance
 from scipy import ndimage as ndi
 from numpy import unravel_index
+from skimage.external import tifffile
 
 
 #modifying the joining detection script to measure the angle of Sisi's nanotubes relative to the x-axis of her images 
 #modifying this script further to measure a time series of angles for individual tubes and performa an autocorrelation 
 #analysis to determine the relaxation time 
+#need a method to assign nanotubes a label based on their endpoint positions, referencing against a record of nanotubes
+#detected from all previous images in the time series 
+
 
 #constants
-#constants
-tube_width = 5.0
-length_cutoff = 3.0 
+tube_width = 7.0
+length_cutoff = 7.0 
 eccentricity_cutoff = 0.5
-end_to_end_distance_cutoff = 10.0
+
 
 def dotproduct(v1, v2):
-  return sum((a*b) for a, b in zip(v1, v2))
+	return sum((a*b) for a, b in zip(v1, v2))
 
 def length(v):
-  return math.sqrt(dotproduct(v, v))
+	return math.sqrt(dotproduct(v, v))
 
 def angle(v1, v2):
-  return math.acos(abs(dotproduct(v1, v2) )/ (length(v1) * length(v2)))
+	#going to store a time series of endpoint to endpoint vectors instead of angles 
+	#this will make calculating the MSAD for a given delta t easier
+	#we will not need to worry about finding the minimum angle between two time points (just use the dot product)
+	print v1
+	print v2
+
+	return math.acos(dotproduct(v1, v2) / (length(v1) * length(v2)))
 
 def line_length(line):
 	p0, p1 = line
@@ -112,52 +121,84 @@ def calc_distance(endpoint1, endpoint2):
 
 	return distance
 
-	
+def find_seed_attachment_point(endpoints):
+	#hack, going to hard code the approximate attachment point and find the endpoint that is closer to that one
+	#this could be done more elegantly by going through the image stack and finding the point that does not change
+	approx_seed_attachment_point = np.array([33,33])
 
-tube_lengths = []
-tube_angles = []
+	endpoint1_distance = calc_distance(endpoints[0], approx_seed_attachment_point)
+	endpoint2_distance = calc_distance(endpoints[1], approx_seed_attachment_point)
 
-
-i=0
-cy3_file_list = os.listdir('6_nt')
-
-
-for i in range(len(cy3_file_list)):
-	cy3_file = cy3_file_list[i]
-
-	print "cy3 filename is "+str(cy3_file)
-	image = io.imread(cy3_file)
+	if endpoint1_distance < endpoint2_distance:
+		return endpoints[0], endpoints[1]
+	else:
+		return endpoints[1], endpoints[0]
 
 
-	#perfoming edge detection and morphological filling
-	edges_open = canny(image, 2, 1, 500) #originally 2,1,25
-	#edges_open = canny(image, 2) #originally 2,1,25
-	selem = disk(3)#originally 5
-	edges = closing(edges_open, selem)
-	fill_tubes = ndi.binary_fill_holes(edges)
-	io.imsave(cy3_file+"fill_tubes.png", img_as_uint(fill_tubes), cmap=cm.gray)
-	cy3_endpoint_mask = make_endpoints_mask(fill_tubes)
+def process_images():
+	tube_lengths = []
+	tube_angles = []
 
 
+	i=1
 
-	#label image 
-	label_image = label(fill_tubes)
+	cy3_image_stack = tifffile.imread("0_P1_tube_2.tif")
 
 
-	print "detecting nanotube angles...."
-	print len(regionprops(label_image))
-	for region in regionprops(label_image):
-		if region.area/tube_width >= length_cutoff and region.eccentricity >= eccentricity_cutoff:
-			region_coords = region.coords.tolist()
-			region_endpoints = endpoints(region_coords, cy3_endpoint_mask)
-			if region_endpoints == None:
-				continue
-			endpoint_to_endpoint_vector  = np.subtract(region_endpoints[0], region_endpoints[1])
-			x_axis_vector = np.array([0, 1])
-			angle_with_x_axis = angle(endpoint_to_endpoint_vector, x_axis_vector)
-			angle_with_x_axis *= 180.0/math.pi
-			print 'angle with x axis is: ', angle_with_x_axis
-			tube_angles.append(angle_with_x_axis)
+	for image in cy3_image_stack:
+		total_images = len(cy3_image_stack)
+		current_frame = i
+		print "processing frame " +str(i) + " of "+str(total_images)
+
+
+		#perfoming edge detection and morphological filling
+		edges_open = canny(image, 2, 1, 50) #originally 2,1,25
+		selem = disk(3)#originally 5
+		edges = closing(edges_open, selem)
+		fill_tubes = ndi.binary_fill_holes(edges)
+		io.imsave(str(i)+"_fill_tubes.png", img_as_uint(fill_tubes), cmap=cm.gray)
+		cy3_endpoint_mask = make_endpoints_mask(fill_tubes)
+
+
+		#label image 
+		label_image = label(fill_tubes)
+
+
+		print "detecting nanotube angles...."
+		print len(regionprops(label_image))
+
+		if len(regionprops(label_image)) == 0:
+			#image contains no nanotubes
+			print 'angle cannot be determined: assigning uniform distribution'
+			tube_angles.append('uniform')
+
+
+		#we need to determine if a nanotube is present and if it is elongated enough to make a determination of 
+		#the angle in the x-y plane
+
+		for region in regionprops(label_image):
+			if region.area/tube_width >= length_cutoff and region.eccentricity >= eccentricity_cutoff:
+				region_coords = region.coords.tolist()
+				region_endpoints = endpoints(region_coords, cy3_endpoint_mask)
+				if region_endpoints == None:
+					continue
+
+				#before calculating the endpoint to endpoint vector we need to make sure that the root point is the same
+				#the second endpoint in the subtraction should always be the seed attachment point 
+				#seed_attachment_point = find_seed_attachment_point(region_endpoints, previous_region_endpoints)
+				seed_attachment_point, diffusing_end = find_seed_attachment_point(region_endpoints)
+				endpoint_to_endpoint_vector  = np.subtract(diffusing_end, seed_attachment_point)
+				print endpoint_to_endpoint_vector
+				x_axis_vector = np.array([0.0, 1.0])
+				angle_with_x_axis = angle(endpoint_to_endpoint_vector, x_axis_vector)
+				angle_with_x_axis *= 180.0/math.pi
+				print 'angle with x axis is: ', angle_with_x_axis
+				tube_angles.append(angle_with_x_axis)
+
+				#previous_region_endpoints = region_endpoints
+		i+=1
+
+	return tube_angles
 
 				
 
@@ -165,6 +206,7 @@ for i in range(len(cy3_file_list)):
 
 print "printing angles"
 f1=open('angles.dat','w+')
+tube_angles = process_images()
 for angle in tube_angles:
 	print >>f1, angle
 f1.close()

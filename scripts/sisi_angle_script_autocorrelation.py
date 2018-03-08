@@ -21,7 +21,12 @@ from scipy.spatial import distance
 from scipy import ndimage as ndi
 from numpy import unravel_index
 from skimage.external import tifffile
-
+import scipy.stats
+import matplotlib.pyplot as plt
+from scipy.stats import pearsonr
+#from pymc3 import *
+import pymc
+from StringIO import StringIO
 
 #modifying the joining detection script to measure the angle of Sisi's nanotubes relative to the x-axis of her images 
 #modifying this script further to measure a time series of angles for individual tubes and performa an autocorrelation 
@@ -37,19 +42,70 @@ eccentricity_cutoff = 0.5
 
 
 def dotproduct(v1, v2):
-	return sum((a*b) for a, b in zip(v1, v2))
+
+	#v1 = np.array([int(v1[0]), int(v1[1])])
+	#v2 = np.array([int(v2[0]), int(v2[1])])
+	#return sum((a*b) for a, b in zip(v1, v2))
+	return np.dot(v1, v2)
 
 def length(v):
-	return math.sqrt(dotproduct(v, v))
+	#print "dot product result is: " + str(math.sqrt(dotproduct(v, v)))
+	#return math.sqrt(dotproduct(v, v))
+	return np.linalg.norm(v)
 
 def angle(v1, v2):
 	#going to store a time series of endpoint to endpoint vectors instead of angles 
 	#this will make calculating the MSAD for a given delta t easier
 	#we will not need to worry about finding the minimum angle between two time points (just use the dot product)
+	#returns angle is radians not degrees 
+	print 'dot product is: ', dotproduct(v1,v2)
 	print v1
 	print v2
+	print length(v1)
+	print length(v2)
+	print dotproduct(v1, v2) / (length(v1) * length(v2))
+	if dotproduct(v1, v2) / (length(v1) * length(v2)) >= .9999 and dotproduct(v1, v2) / (length(v1) * length(v2)) <= 1.0001:
+		print "hit condition"
+		return 0.0
+	else:
+		return math.acos(dotproduct(v1, v2) / (length(v1) * length(v2)))
 
-	return math.acos(dotproduct(v1, v2) / (length(v1) * length(v2)))
+def signed_angle_with_x_axis(vector):
+	#need a signed angle (to distinguish +45 from -45 from the x axis) this is purely needed for calculating correlation coefficients
+	#will need to compare the y coordinate of the diffusing end to the y coordinate of the seed attachment point
+	#to determine whether the angle is positive or negative 
+
+	x_axis_vector = np.array([0.0, 1.0]) #looks like y but remember matrix indices are row, column
+
+	#find unsigned angle
+	unsigned_angle = math.acos(dotproduct(vector, x_axis_vector) / (length(vector) * length(x_axis_vector)))
+
+	#find the sign using the y component of the vector 
+	if vector[0] >= 0:
+		return unsigned_angle
+
+	else:
+		return -1.0 * unsigned_angle 
+
+def vector_from_x_axis_angle(angle):
+	#note this will only work if the mean angle from the x axis is very close to zero... I think I fixed this  
+	#convert angle to radians
+	#print 'angle is ', angle 
+	angle *= math.pi/180.0
+	tan_angle = math.tan(angle)
+	#tan = opposite over adjacent = y/x = vector[0]/vector[1]
+	#if angle is negative the y component should be negative
+	if angle <= 0.0:
+		vector0 = -1.0
+		vector1 = 1.0/tan_angle
+
+	else:
+		vector0 = 1.0
+		vector1 = 1.0/tan_angle
+
+	vector = np.array([vector0, vector1])
+
+	return vector 
 
 def line_length(line):
 	p0, p1 = line
@@ -121,10 +177,24 @@ def calc_distance(endpoint1, endpoint2):
 
 	return distance
 
+def calc_angle_variance(tube_vectors, mean_tube_vector):
+	#calculate the variance in the distribution of angles
+	#this needs to be done by using the dot product for each point 
+	squared_angle_differences = []
+	for tube_vector in tube_vectors:
+		angle_difference = angle(tube_vector, mean_tube_vector)
+		squared_angle_differences.append(angle_difference * angle_difference)
+
+	n, min_max, mean, var, skew, kurt = scipy.stats.describe( squared_angle_differences )
+
+	return mean 
+
+
+
 def find_seed_attachment_point(endpoints):
 	#hack, going to hard code the approximate attachment point and find the endpoint that is closer to that one
 	#this could be done more elegantly by going through the image stack and finding the point that does not change
-	approx_seed_attachment_point = np.array([33,33])
+	approx_seed_attachment_point = np.array([31,23])
 
 	endpoint1_distance = calc_distance(endpoints[0], approx_seed_attachment_point)
 	endpoint2_distance = calc_distance(endpoints[1], approx_seed_attachment_point)
@@ -134,15 +204,138 @@ def find_seed_attachment_point(endpoints):
 	else:
 		return endpoints[1], endpoints[0]
 
+def msad(tube_vectors, delta_t):
+	#for a given delta_t find the distribution of mean square angular deviations
+	#images are spaced 2 seconds apart
+	#for 'uniform' entries we will select an angle from a uniform distribution
+
+	#first let's go through the list and replace 'uniform' entries with a random vector
+	final_tube_vectors = []
+	for tube_vector in tube_vectors:
+		print tube_vector
+		if tube_vector == 'uniform':
+			new_vector = np.array([np.random.random()*1.0 - 2.0, np.random.random()*1.0 - 2.0])
+		else: 
+			new_vector = tube_vector
+		final_tube_vectors.append(new_vector)
+
+	print final_tube_vectors
+	angular_displacements = []
+	dot_products = []
+	for i in range(len(tube_vectors)-delta_t):
+		angular_displacement = angle(final_tube_vectors[i], final_tube_vectors[i+delta_t])
+		angular_displacements.append(angular_displacement * angular_displacement)
+		dot_product = np.dot(final_tube_vectors[i]/np.linalg.norm(final_tube_vectors[i]), final_tube_vectors[i+delta_t]/np.linalg.norm(final_tube_vectors[i+delta_t]) )
+		dot_products.append(dot_product)
+	print angular_displacements
+	n, min_max, mean, var, skew, kurt = scipy.stats.describe( angular_displacements )
+	mean_angular_displacement = mean
+	n, min_max, mean, var, skew, kurt = scipy.stats.describe( dot_products )
+	mean_dot_product = mean
+	return mean_angular_displacement, mean_dot_product
+
+def mean_msad(tube_vectors, delta_t):
+	#just repeating the msad calculation n times and taking the average 
+	msad_list = []
+	mean_dot_product_list = []
+	if delta_t == 0.0:
+		return 0.0, 1.0, 0.0
+	for i in range(10):
+		msad_, dot_product = msad(tube_vectors, delta_t)
+		msad_list.append(msad_)
+		mean_dot_product_list.append(dot_product)
+	n, min_max, mean, var, skew, kurt = scipy.stats.describe( msad_list)
+	mean_msad = mean
+	msad_variance = var
+	n, min_max, mean, var, skew, kurt = scipy.stats.describe( mean_dot_product_list)
+	mean_dot_product = mean
+
+	return mean_msad, mean_dot_product, msad_variance
+
+def pearson_r(tube_vectors, tube_angles, delta_t):
+	#calculating pearson correlation coefficient for a given delta t
+	#this will have to be repeated many times to account for uncertainty in some angular measurments 
+	#need to implement positive/negative angles with a given axis here 
+
+	#first we need to calculate the mean angle with the x-axis for the signal and the shifted signal 
+	#correction: I am going to assume that the mean and variance do not change with time and are the same for the 
+	#original and shifted signals
+	final_tube_angles = []
+	final_tube_vectors = []
+	for i in range(len(tube_angles)):
+		print tube_angles[i]
+		if tube_angles[i] == 'uniform':
+			new_angle = np.random.random()*360.0 - 180.0 
+			new_vector = vector_from_x_axis_angle(new_angle)
+		else: 
+			new_angle = tube_angles[i]
+			new_vector = tube_vectors[i]
+		final_tube_angles.append(new_angle)
+		final_tube_vectors.append(new_vector)
+	print final_tube_angles 
+
+	n, min_max, mean, var, skew, kurt = scipy.stats.describe(final_tube_angles)
+	mean_angle_with_x_axis = mean
+
+	#now we need to convert the mean angle into a vector
+	mean_vector = vector_from_x_axis_angle(mean_angle_with_x_axis)
+	#this is not a valid way to calc variance here b/c we are using the dot product to find the difference 
+	#between each point and the mean 
+
+	var_angle_with_x_axis = calc_angle_variance(final_tube_vectors, mean_vector)
+	print "mean angle with x_axis is: ", mean_angle_with_x_axis
+	print "mean vector is: ", mean_vector
+
+	#now we calculate < x_i - x_mean > using the dot product to find the difference between the given angle and the mean
+	#we do this for both the original and shifted signals 
+
+	correlation_numerator = []
+	for i in range(len(tube_vectors)-delta_t):
+		angle_mean_difference = angle(final_tube_vectors[i], mean_vector)
+		#print "mean_vector is: ", mean_vector
+		#print "current vector is: ", final_tube_vectors[i]
+		print "angle difference is: ", angle_mean_difference
+		shifted_angle_mean_difference = angle(final_tube_vectors[i+delta_t], mean_vector)
+		#print "shifted vector is: ", final_tube_vectors[i+delta_t]
+		print "shifted angle difference is: ", shifted_angle_mean_difference
+		correlation_numerator.append(angle_mean_difference * shifted_angle_mean_difference)
+
+	n, min_max, mean, var, skew, kurt = scipy.stats.describe( correlation_numerator )
+	correlation_numerator_mean = mean
+	correlation_denominator = var_angle_with_x_axis
+
+	pearson_correlation = correlation_numerator_mean/correlation_denominator
+
+
+	return pearson_correlation 
+
+
+
+
+
+
+
+
+
+
+
+'''def plot_mean_msad_vs_delta_t():
+	#generate plot
+
+def estimate_diffusion_coefficient():
+	#estimate diffusion coefficient'''
+
+
 
 def process_images():
 	tube_lengths = []
 	tube_angles = []
+	tube_vectors = []
 
 
 	i=1
 
-	cy3_image_stack = tifffile.imread("0_P1_tube_2.tif")
+	cy3_image_stack = tifffile.imread("0_2um_tube.tif")
 
 
 	for image in cy3_image_stack:
@@ -171,6 +364,8 @@ def process_images():
 			#image contains no nanotubes
 			print 'angle cannot be determined: assigning uniform distribution'
 			tube_angles.append('uniform')
+			tube_vectors.append('uniform')
+			continue
 
 
 		#we need to determine if a nanotube is present and if it is elongated enough to make a determination of 
@@ -192,23 +387,135 @@ def process_images():
 				x_axis_vector = np.array([0.0, 1.0])
 				angle_with_x_axis = angle(endpoint_to_endpoint_vector, x_axis_vector)
 				angle_with_x_axis *= 180.0/math.pi
+				signed_x_axis_angle = signed_angle_with_x_axis(endpoint_to_endpoint_vector)
+				signed_x_axis_angle *= 180.0/math.pi
 				print 'angle with x axis is: ', angle_with_x_axis
-				tube_angles.append(angle_with_x_axis)
+				print 'signed angle with x axis is: ', signed_x_axis_angle
+				tube_angles.append(signed_x_axis_angle)
+				tube_vectors.append(endpoint_to_endpoint_vector)
 
 				#previous_region_endpoints = region_endpoints
-		i+=1
 
-	return tube_angles
+			else:
+				tube_angles.append('uniform')
+				tube_vectors.append('uniform')
+				break
+
+
+		i+=1
+	print tube_vectors
+	print len(tube_vectors)
+	return tube_angles, tube_vectors
 
 				
 
+tube_angles, tube_vectors = process_images()
+mean_angle_displacement, mean_dot_product = msad(tube_vectors, 0)
+print "mean angle displacement: ", mean_angle_displacement
+print "mean dot product: ", mean_dot_product
+random_test_tube_angles = []
+random_test_tube_vectors = []
+#for i in range(100000):
+#	random_test_tube_angles.append('uniform')
+#	random_test_tube_vectors.append('uniform')
+
+#pearson_correlation = pearson_r(random_test_tube_vectors, random_test_tube_angles, 10)
+#pearson_correlation = pearson_r(tube_vectors, tube_angles, 10)
+#print "pearson correlation is: ", pearson_correlation
+msad_list = []
+delta_t_list = range(0,10)
+delta_t_plot_list = []
+dot_product_list = []
+msad_variance_list = []
+for delta_t in delta_t_list:
+	msad_, dot_product, msad_variance = mean_msad(tube_vectors,delta_t)
+	msad_list.append(msad_)
+	dot_product_list.append(dot_product)
+	delta_t_plot_list.append(delta_t*2.0)
+	msad_variance_list.append(msad_variance)
+
+plt.plot(delta_t_plot_list, msad_list)
+plt.xlabel('n * delta_t (seconds) ')
+plt.ylabel('MSAD (radians^2)')
+#plt.title('Hill model brute force optimization')
+plt.savefig('msad_plot.pdf')
+plt.close()
+
+print dot_product_list
+print "msad list is: ",msad_list
+print "msad variance list is: ",msad_variance_list
+print "delta_t list is: ",delta_t_plot_list
+plt.plot(delta_t_plot_list, dot_product_list)
+plt.xlabel('n * delta_t (seconds) ')
+plt.ylabel('< dot product between vec(t), vec(t+delta_t) >')
+#plt.title('Hill model brute force optimization')
+plt.savefig('autocorrelation_plot.pdf')
+plt.close()
+
+x_data = delta_t_plot_list
+y_data = msad_list
+y_variance = sum(msad_variance_list)/float(len(msad_variance_list))
+print "mean msad_variance is: ", y_variance
+
+data = dict(x = x_data, y = y_data)
+
+'''with Model() as model: # model specifications in PyMC3 are wrapped in a with-statement
+    # Define priors
+    #sigma = HalfCauchy('sigma', beta=10, testval=1.)
+    sigma = y_variance 
+    intercept = 0
+    x_coeff = Normal('x', .25, sd=.3)
+
+    # Define likelihood
+    likelihood = Normal('y', mu=intercept + x_coeff * x_data,
+                        sd=sigma, observed=y_data)
+
+    # Inference!
+    trace = sample(3000, cores=2) # draw 3000 posterior samples using
+'''
 
 
-print "printing angles"
+
+alpha = pymc.Uniform('alpha', lower=0.1, upper=1)
+
+x = pymc.Normal('x', mu=0, tau=1, value=x_data, observed=True)
+
+@pymc.deterministic(plot=False)
+def linear_regress(x=x, alpha=alpha):
+    return x*alpha
+
+y = pymc.Normal('output', mu=linear_regress, tau = 1.0/y_variance, value=y_data, observed=True)
+
+model = pymc.Model([x, y, alpha])
+mcmc = pymc.MCMC(model)
+mcmc.sample(iter=100000, burn=10000, thin=10)
+
+alpha.summary()
+
+result = StringIO()
+ 
+sys.stdout = result
+
+alpha.summary()
+
+result_string = result.getvalue()
+
+print "printing MCMC summary"
+f1=open('bayesian_regression.dat','w+')
+#tube_angles = process_images()
+print >>f1, result_string
+f1.close()
+
+
+
+
+
+
+'''print "printing angles"
 f1=open('angles.dat','w+')
-tube_angles = process_images()
+#tube_angles = process_images()
 for angle in tube_angles:
 	print >>f1, angle
 f1.close()
-
+'''
 

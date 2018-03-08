@@ -127,17 +127,17 @@ file_paths = tkFileDialog.askopenfilenames()
 cy3_file_list = list(file_paths)
 '''
 
-cy3_image_stack = tifffile.imread("0_2um_tube.tif")
+cy3_image_stack = tifffile.imread("120 2-C2.tif")
 
 for image in cy3_image_stack:
 	total_images = len(cy3_image_stack)
 	current_frame = i
 	print "processing frame " +str(i) + " of "+str(total_images)
 
-	cy3_file = cy3_file_list[i]
+	#cy3_file = cy3_file_list[i]
 
 	#print "cy3 filename is "+str(cy3_file)
-	image_unthresholded = io.imread(cy3_file)
+	#image_unthresholded = io.imread(cy3_file)
 
 	#thresh = threshold_otsu(image_unthresholded)
 	#image = image_unthresholded>thresh
@@ -153,7 +153,7 @@ for image in cy3_image_stack:
 	#image = rank.otsu(image_unthresholded, selem)
 	#image_647 = rank.otsu(image_647_unthresholded, selem)
 
-	image = image_unthresholded
+	#image = image_unthresholded
 
 
 	#perfoming edge detection and morphological filling
@@ -162,7 +162,7 @@ for image in cy3_image_stack:
 	selem = disk(3)#originally 5
 	edges = closing(edges_open, selem)
 	fill_tubes = ndi.binary_fill_holes(edges)
-	io.imsave(cy3_file+"fill_tubes.png", img_as_uint(fill_tubes), cmap=cm.gray)
+	io.imsave(str(i)+"_fill_tubes.png", img_as_uint(fill_tubes), cmap=cm.gray)
 	cy3_endpoint_mask = make_endpoints_mask(fill_tubes)
 
 

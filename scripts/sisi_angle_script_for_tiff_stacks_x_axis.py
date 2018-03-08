@@ -112,88 +112,104 @@ def calc_distance(endpoint1, endpoint2):
 	return distance
 
 	
+def process_tiff_stacks(filename):
+	# Line finding using the Probabilistic Hough Transform
+	tube_lengths = []
+	#tube_angles = []
 
-# Line finding using the Probabilistic Hough Transform
-tube_lengths = []
-tube_angles = []
+
+	i=0
+	#cy3_file_list = os.listdir('6_nt')
+	'''root = Tkinter.Tk()
+	root.withdraw()
+
+	file_paths = tkFileDialog.askopenfilenames()
+	cy3_file_list = list(file_paths)
+	'''
+
+	cy3_image_stack = tifffile.imread(filename)
+
+	for image in cy3_image_stack:
+		tube_angles = []
+		if (i+1)%4 != 0:
+			i+=1
+			continue
+		else:
+			total_images = len(cy3_image_stack)
+			current_frame = i
+			print "processing frame " +str(i) + " of "+str(total_images)
+
+			#cy3_file = cy3_file_list[i]
+
+			#print "cy3 filename is "+str(cy3_file)
+			#image_unthresholded = io.imread(cy3_file)
+
+			#thresh = threshold_otsu(image_unthresholded)
+			#image = image_unthresholded>thresh
+
+			block_size = 15
+			#image = threshold_local(image_unthresholded, block_size, offset=10)
+			#image_647 = threshold_local(image_647_unthresholded, block_size, offset=10)
+
+			radius = 5
+			selem = disk(radius)
+
+			#thresholding both files (getting rid of this because it should not be necessary!)
+			#image = rank.otsu(image_unthresholded, selem)
+			#image_647 = rank.otsu(image_647_unthresholded, selem)
+
+			#image = image_unthresholded
 
 
-i=0
-#cy3_file_list = os.listdir('6_nt')
-'''root = Tkinter.Tk()
+			#perfoming edge detection and morphological filling
+			edges_open = canny(image, 2, 1, 50) #originally 2,1,25 last param can go up to 500 for improved performance, must lower for poorer images
+			#edges_open = canny(image, 2) #originally 2,1,25
+			selem = disk(3)#originally 5
+			edges = closing(edges_open, selem)
+			fill_tubes = ndi.binary_fill_holes(edges)
+			io.imsave(str(i)+"_fill_tubes.png", img_as_uint(fill_tubes), cmap=cm.gray)
+			cy3_endpoint_mask = make_endpoints_mask(fill_tubes)
+
+
+
+			#label image 
+			label_image = label(fill_tubes)
+
+
+			print "detecting nanotube angles...."
+			print len(regionprops(label_image))
+			for region in regionprops(label_image):
+				if region.area/tube_width >= length_cutoff and region.eccentricity >= eccentricity_cutoff:
+					region_coords = region.coords.tolist()
+					region_endpoints = endpoints(region_coords, cy3_endpoint_mask)
+					if region_endpoints == None:
+						continue
+					endpoint_to_endpoint_vector  = np.subtract(region_endpoints[0], region_endpoints[1])
+					x_axis_vector = np.array([0, 1])
+					#x_axis_vector = np.array([1,0])
+					angle_with_x_axis = angle(endpoint_to_endpoint_vector, x_axis_vector)
+					angle_with_x_axis *= 180.0/math.pi
+					print 'angle with x axis is: ', angle_with_x_axis
+					tube_angles.append(angle_with_x_axis)
+
+						
+			i+=1
+
+
+
+		print "printing angles"
+		f1=open('angles.dat','a')
+		for angle_ in tube_angles:
+			print >>f1, angle_
+		f1.close()
+
+root = Tkinter.Tk()
 root.withdraw()
 
 file_paths = tkFileDialog.askopenfilenames()
 cy3_file_list = list(file_paths)
-'''
 
-cy3_image_stack = tifffile.imread("0_2um_tube.tif")
-
-for image in cy3_image_stack:
-	total_images = len(cy3_image_stack)
-	current_frame = i
-	print "processing frame " +str(i) + " of "+str(total_images)
-
-	cy3_file = cy3_file_list[i]
-
-	#print "cy3 filename is "+str(cy3_file)
-	image_unthresholded = io.imread(cy3_file)
-
-	#thresh = threshold_otsu(image_unthresholded)
-	#image = image_unthresholded>thresh
-
-	block_size = 15
-	#image = threshold_local(image_unthresholded, block_size, offset=10)
-	#image_647 = threshold_local(image_647_unthresholded, block_size, offset=10)
-
-	radius = 5
-	selem = disk(radius)
-
-	#thresholding both files (getting rid of this because it should not be necessary!)
-	#image = rank.otsu(image_unthresholded, selem)
-	#image_647 = rank.otsu(image_647_unthresholded, selem)
-
-	image = image_unthresholded
-
-
-	#perfoming edge detection and morphological filling
-	edges_open = canny(image, 2, 1, 50) #originally 2,1,25 last param can go up to 500 for improved performance, must lower for poorer images
-	#edges_open = canny(image, 2) #originally 2,1,25
-	selem = disk(3)#originally 5
-	edges = closing(edges_open, selem)
-	fill_tubes = ndi.binary_fill_holes(edges)
-	io.imsave(cy3_file+"fill_tubes.png", img_as_uint(fill_tubes), cmap=cm.gray)
-	cy3_endpoint_mask = make_endpoints_mask(fill_tubes)
-
-
-
-	#label image 
-	label_image = label(fill_tubes)
-
-
-	print "detecting nanotube angles...."
-	print len(regionprops(label_image))
-	for region in regionprops(label_image):
-		if region.area/tube_width >= length_cutoff and region.eccentricity >= eccentricity_cutoff:
-			region_coords = region.coords.tolist()
-			region_endpoints = endpoints(region_coords, cy3_endpoint_mask)
-			if region_endpoints == None:
-				continue
-			endpoint_to_endpoint_vector  = np.subtract(region_endpoints[0], region_endpoints[1])
-			x_axis_vector = np.array([0, 1])
-			angle_with_x_axis = angle(endpoint_to_endpoint_vector, x_axis_vector)
-			angle_with_x_axis *= 180.0/math.pi
-			print 'angle with x axis is: ', angle_with_x_axis
-			tube_angles.append(angle_with_x_axis)
-
-				
-	i+=1
-
-
-print "printing angles"
-f1=open('angles.dat','w+')
-for angle in tube_angles:
-	print >>f1, angle
-f1.close()
-
+#cy3_file_list = os.listdir('tiffs_to_process')
+for filename in cy3_file_list:
+	process_tiff_stacks(filename)
 

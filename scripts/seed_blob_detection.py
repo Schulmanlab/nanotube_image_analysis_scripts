@@ -2,62 +2,95 @@ from math import sqrt
 from skimage import data
 from skimage.feature import blob_dog, blob_log, blob_doh
 from skimage.color import rgb2gray
-from skimage import io 
-import sys
-
+from skimage import io
+import sys, os
+import numpy
 import matplotlib.pyplot as plt
-from skimage.data import camera
-from skimage.filters import roberts, sobel, scharr, prewitt
+plt.switch_backend('agg')
 
+question = str(raw_input('Would you like to use the current directory? [y/n]: '))
+if question == 'y':
+	pathname = os.getcwd()
+else: pathname = str(raw_input('Enter path name: '))
 
-image_gray = io.imread(str(sys.argv[1]))
-image = io.imread(str(sys.argv[1]))
-#image_gray = rgb2gray(image)
+dilution = float(raw_input('Enter the additional dilution factor: '))
 
-blobs_log = blob_log(image_gray, max_sigma=30, num_sigma=10, threshold=.01)
-#blobs_log = blob_log(image_gray, max_sigma=1, num_sigma=10, threshold=.1)
+#Initiate variables
+numS = 0
+avgS = 0
+n = 0
 
-print "number of seeds: "+str(len(blobs_log))
+pathnames = os.listdir(pathname)
+output = []
 
-# Compute radii in the 3rd column.
-blobs_log[:, 2] = blobs_log[:, 2] * sqrt(2)
+for num in range(len(pathnames)):
 
+	if os.path.isdir(pathnames[num]):
+		continue
 
-blobs_list = [blobs_log]
-colors = ['yellow']
-titles = ['Laplacian of Gaussian']
-sequence = zip(blobs_list, colors, titles)
+	image_gray = io.imread(pathnames[num])
+	image = io.imread(str(pathnames[num]))
+	#Comment out if images saved as color images
+	#image_gray = rgb2gray(image)
 
-fig, ax = plt.subplots(figsize=(9, 3))
-ax.set_aspect('equal')
-#ax = axes.ravel()
+	#Calculate seeds using threshold of 0.075
+	blobs_log = blob_log(image_gray, max_sigma=1, num_sigma=10, threshold=.075, overlap=.1)
+	numS = len(blobs_log)
 
-for idx, (blobs, color, title) in enumerate(sequence):
-    #ax[idx].set_title(title)
-    ax.imshow(image, interpolation='nearest')
-    for blob in blobs:
-        y, x, r = blob
-        c = plt.Circle((x, y), r, color=color, linewidth=2, fill=False)
-        ax.add_patch(c)
-    #ax[idx].set_axis_off()
+	#Average number of seeds over thresholds 0.07 to 0.08
+	'''for i in range(10):
+		numS += len(blob_log(image_gray, max_sigma=1, num_sigma=10, threshold=.07 + float(i)/float(1000), overlap=.1))
+	numS /= 11'''
 
-#plt.tight_layout()
-plt.show()
+	#Add filename and number of seeds to output; increment number of files by 1
+	print pathnames[num], numS
+	output.append([pathnames[num], numS])
+	n += 1
 
-'''edge_roberts = roberts(image)
-edge_sobel = sobel(image)
+	# Compute radii in the 3rd column.
+	blobs_log[:,2] = blobs_log[:,2] * sqrt(2)
 
-fig, ax = plt.subplots(ncols=2, sharex=True, sharey=True,
-                       figsize=(8, 4))
+	blobs_list = [blobs_log]
+	colors = ['yellow']
+	titles = ['Laplacian of Gaussian']
+	sequence = zip(blobs_list, colors, titles)
 
-ax[0].imshow(edge_roberts, cmap=plt.cm.gray)
-ax[0].set_title('Roberts Edge Detection')
+	fig, ax = plt.subplots(figsize=(9, 3))
+	ax.set_aspect('equal')
 
-ax[1].imshow(edge_sobel, cmap=plt.cm.gray)
-ax[1].set_title('Sobel Edge Detection')
+	for idx, (blobs, color, title) in enumerate(sequence):
+		ax.imshow(image, interpolation='nearest')
 
-for a in ax:
-    a.axis('off')
+	for blob in blobs:
+		y, x, r = blob
+		c = plt.Circle((x, y), r, color=color, linewidth=2, fill=False)
+		ax.add_patch(c)
 
-plt.tight_layout()
-plt.show()'''
+	name, ext = os.path.splitext(pathnames[num])
+	plt.savefig(name + 'plot.pdf')
+
+column1 = [row[1] for row in output]
+
+#Calculate outliers using the IQR
+'''med = numpy.median(column1)
+q1 = numpy.percentile(column1, 25)
+q3 = numpy.percentile(column1, 75)
+iqr = q3 - q1
+leftbound = q1 - 1.25*iqr
+rightbound = q3 + 1.25*iqr
+for i in range(len(column1)):
+	if column1[i] < leftbound or column1[i] > rightbound:
+		print output[i], "is an outlier"
+	else: avgS += column1[i]'''
+
+#Calculate outliers 2 SDs away from the mean
+for i in range(len(column1)):
+	if abs(column1[i] - numpy.mean(column1)) > 2 * numpy.std(column1):
+		print output[i], "is an outlier"
+		n -= 1
+	else: avgS += column1[i]
+
+avg = str(avgS/float(n))
+fov = float(avg) * dilution
+print "Average number of seeds: " + avg
+print "Seeds per fov for 0.3uL in 19.7uL: " + str(fov)
